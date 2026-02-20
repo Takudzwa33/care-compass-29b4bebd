@@ -1,19 +1,30 @@
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { Heart, LogIn } from "lucide-react";
+import { Heart, LogIn, UserPlus } from "lucide-react";
 import { motion } from "framer-motion";
 
 export default function LoginPage() {
-  const { login } = useAuth();
+  const { login, signup } = useAuth();
+  const [isSignup, setIsSignup] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [fullName, setFullName] = useState("");
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
-    const success = login(email, password);
-    if (!success) setError("Invalid credentials. Try admin@hospital.com, nurse@hospital.com, doctor@hospital.com, or emergency@hospital.com");
+    setLoading(true);
+
+    if (isSignup) {
+      const err = await signup(email, password, fullName);
+      if (err) setError(err);
+    } else {
+      const err = await login(email, password);
+      if (err) setError(err);
+    }
+    setLoading(false);
   };
 
   return (
@@ -56,7 +67,7 @@ export default function LoginPage() {
         </motion.div>
       </div>
 
-      {/* Right panel - login form */}
+      {/* Right panel */}
       <div className="flex-1 flex items-center justify-center p-8 bg-background">
         <motion.div
           initial={{ opacity: 0, x: 20 }}
@@ -71,17 +82,34 @@ export default function LoginPage() {
             <h1 className="text-2xl font-bold text-foreground">MedWatch</h1>
           </div>
           
-          <h2 className="text-2xl font-bold text-foreground mb-2">Welcome back</h2>
-          <p className="text-muted-foreground mb-8">Sign in to access the hospital management system</p>
+          <h2 className="text-2xl font-bold text-foreground mb-2">
+            {isSignup ? "Create your account" : "Welcome back"}
+          </h2>
+          <p className="text-muted-foreground mb-8">
+            {isSignup ? "Sign up to access the hospital management system" : "Sign in to access the hospital management system"}
+          </p>
 
           <form onSubmit={handleSubmit} className="space-y-5">
+            {isSignup && (
+              <div>
+                <label className="text-sm font-medium text-foreground mb-1.5 block">Full Name</label>
+                <input
+                  type="text"
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  placeholder="Dr. Jane Smith"
+                  className="w-full px-4 py-3 rounded-lg border border-input bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring transition"
+                  required
+                />
+              </div>
+            )}
             <div>
               <label className="text-sm font-medium text-foreground mb-1.5 block">Email</label>
               <input
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="admin@hospital.com"
+                placeholder="you@hospital.com"
                 className="w-full px-4 py-3 rounded-lg border border-input bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring transition"
                 required
               />
@@ -92,9 +120,10 @@ export default function LoginPage() {
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="Enter any password"
+                placeholder="••••••••"
                 className="w-full px-4 py-3 rounded-lg border border-input bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring transition"
                 required
+                minLength={6}
               />
             </div>
 
@@ -104,21 +133,33 @@ export default function LoginPage() {
 
             <button
               type="submit"
-              className="w-full py-3 rounded-lg bg-primary text-primary-foreground font-medium hover:opacity-90 transition flex items-center justify-center gap-2"
+              disabled={loading}
+              className="w-full py-3 rounded-lg bg-primary text-primary-foreground font-medium hover:opacity-90 transition flex items-center justify-center gap-2 disabled:opacity-50"
             >
-              <LogIn className="w-4 h-4" />
-              Sign In
+              {loading ? (
+                <span className="animate-spin w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full" />
+              ) : isSignup ? (
+                <><UserPlus className="w-4 h-4" /> Sign Up</>
+              ) : (
+                <><LogIn className="w-4 h-4" /> Sign In</>
+              )}
             </button>
           </form>
 
-          <div className="mt-8 p-4 rounded-lg bg-muted">
-            <p className="text-xs font-medium text-muted-foreground mb-2">Demo Accounts (any password):</p>
-            <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground">
-              <span>admin@hospital.com</span>
-              <span>nurse@hospital.com</span>
-              <span>doctor@hospital.com</span>
-              <span>emergency@hospital.com</span>
-            </div>
+          <p className="mt-6 text-center text-sm text-muted-foreground">
+            {isSignup ? "Already have an account?" : "Don't have an account?"}{" "}
+            <button
+              onClick={() => { setIsSignup(!isSignup); setError(""); }}
+              className="text-primary font-medium hover:underline"
+            >
+              {isSignup ? "Sign In" : "Sign Up"}
+            </button>
+          </p>
+
+          <div className="mt-6 p-4 rounded-lg bg-muted">
+            <p className="text-xs text-muted-foreground">
+              New accounts default to the <strong>Nurse</strong> role. An admin can assign roles (Admin, Doctor, Emergency) after signup.
+            </p>
           </div>
         </motion.div>
       </div>

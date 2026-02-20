@@ -1,13 +1,25 @@
-import { wardRatios, ratioHistory } from "@/data/mockData";
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
+import { usePatients, useNurses, useWards } from "@/hooks/useDatabase";
 import { AlertTriangle, CheckCircle } from "lucide-react";
 
 export default function RatioCalculation() {
+  const { patients } = usePatients();
+  const { nurses } = useNurses();
+  const { wards } = useWards();
+
+  const wardRatios = wards.map((w) => {
+    const wardNurses = nurses.filter((n) => n.ward_id === w.id && n.status === "On-Duty").length;
+    const wardPatients = patients.filter((p) => p.ward_id === w.id && !p.discharge_date).length;
+    const patientsPerNurse = wardNurses > 0 ? wardPatients / wardNurses : 0;
+    const ratio = wardNurses > 0 ? `1:${patientsPerNurse.toFixed(1)}` : "N/A";
+    const status = wardNurses === 0 && wardPatients > 0 ? "critical" : patientsPerNurse <= w.safe_ratio_threshold ? "safe" : "critical";
+    return { ward: w.name, nurses: wardNurses, patients: wardPatients, ratio, status, threshold: `1:${w.safe_ratio_threshold}` };
+  });
+
   return (
     <div>
       <div className="page-header">
         <h1 className="page-title">Nurse-to-Patient Ratio</h1>
-        <p className="page-description">Automated ratio calculations per ward and shift with safety thresholds</p>
+        <p className="page-description">Real-time automated ratio calculations per ward with safety thresholds</p>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
@@ -33,22 +45,11 @@ export default function RatioCalculation() {
         ))}
       </div>
 
-      <div className="kpi-card">
-        <h3 className="text-sm font-medium text-muted-foreground mb-4">Historical Ratio Trends (Patients per Nurse)</h3>
-        <ResponsiveContainer width="100%" height={350}>
-          <LineChart data={ratioHistory}>
-            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-            <XAxis dataKey="date" tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }} />
-            <YAxis tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }} label={{ value: "Patients per Nurse", angle: -90, position: "insideLeft", style: { fontSize: 12, fill: "hsl(var(--muted-foreground))" } }} />
-            <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 12 }} />
-            <Legend />
-            <Line type="monotone" dataKey="ICU" stroke="hsl(var(--destructive))" strokeWidth={2} />
-            <Line type="monotone" dataKey="General" stroke="hsl(var(--accent))" strokeWidth={2} />
-            <Line type="monotone" dataKey="Pediatrics" stroke="hsl(var(--info))" strokeWidth={2} />
-            <Line type="monotone" dataKey="Surgery" stroke="hsl(var(--warning))" strokeWidth={2} />
-          </LineChart>
-        </ResponsiveContainer>
-      </div>
+      {wardRatios.length === 0 && (
+        <div className="kpi-card text-center py-12">
+          <p className="text-muted-foreground">No ward data available. Add wards, nurses, and patients to see ratios.</p>
+        </div>
+      )}
     </div>
   );
 }
