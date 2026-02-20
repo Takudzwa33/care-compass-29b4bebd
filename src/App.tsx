@@ -20,13 +20,28 @@ import NotFound from "@/pages/NotFound";
 const queryClient = new QueryClient();
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
+  if (loading) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-background">
+        <span className="animate-spin w-8 h-8 border-4 border-primary/30 border-t-primary rounded-full" />
+      </div>
+    );
+  }
   if (!user) return <Navigate to="/login" replace />;
   return <AppLayout>{children}</AppLayout>;
 }
 
 function AppRoutes() {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-background">
+        <span className="animate-spin w-8 h-8 border-4 border-primary/30 border-t-primary rounded-full" />
+      </div>
+    );
+  }
 
   return (
     <Routes>
