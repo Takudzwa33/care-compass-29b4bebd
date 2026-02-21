@@ -1,7 +1,14 @@
 import { useState } from "react";
-import { useAuth } from "@/contexts/AuthContext";
-import { Heart, LogIn, UserPlus } from "lucide-react";
+import { useAuth, UserRole } from "@/contexts/AuthContext";
+import { Heart, LogIn, UserPlus, Shield, Stethoscope, Siren, Activity } from "lucide-react";
 import { motion } from "framer-motion";
+
+const ROLES: { value: UserRole; label: string; icon: typeof Shield; description: string }[] = [
+  { value: "admin", label: "Administrator", icon: Shield, description: "Full system access & configuration" },
+  { value: "nurse", label: "Nurse", icon: Stethoscope, description: "Patient care & ward management" },
+  { value: "doctor", label: "Doctor", icon: Activity, description: "Patient records & Code Blue" },
+  { value: "emergency", label: "Emergency Team", icon: Siren, description: "Code Blue response & alerts" },
+];
 
 export default function LoginPage() {
   const { login, signup } = useAuth();
@@ -9,6 +16,7 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
+  const [selectedRole, setSelectedRole] = useState<UserRole>("nurse");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -18,7 +26,7 @@ export default function LoginPage() {
     setLoading(true);
 
     if (isSignup) {
-      const err = await signup(email, password, fullName);
+      const err = await signup(email, password, fullName, selectedRole);
       if (err) setError(err);
     } else {
       const err = await login(email, password);
@@ -103,6 +111,35 @@ export default function LoginPage() {
                 />
               </div>
             )}
+            {isSignup && (
+              <div>
+                <label className="text-sm font-medium text-foreground mb-2 block">Select Your Role</label>
+                <div className="grid grid-cols-2 gap-2">
+                  {ROLES.map((r) => {
+                    const Icon = r.icon;
+                    const isSelected = selectedRole === r.value;
+                    return (
+                      <button
+                        key={r.value}
+                        type="button"
+                        onClick={() => setSelectedRole(r.value)}
+                        className={`flex items-start gap-2.5 p-3 rounded-lg border-2 text-left transition ${
+                          isSelected
+                            ? "border-primary bg-primary/5"
+                            : "border-input hover:border-muted-foreground/30"
+                        }`}
+                      >
+                        <Icon className={`w-4 h-4 mt-0.5 shrink-0 ${isSelected ? "text-primary" : "text-muted-foreground"}`} />
+                        <div>
+                          <p className={`text-sm font-medium ${isSelected ? "text-primary" : "text-foreground"}`}>{r.label}</p>
+                          <p className="text-xs text-muted-foreground leading-tight">{r.description}</p>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
             <div>
               <label className="text-sm font-medium text-foreground mb-1.5 block">Email</label>
               <input
@@ -158,7 +195,9 @@ export default function LoginPage() {
 
           <div className="mt-6 p-4 rounded-lg bg-muted">
             <p className="text-xs text-muted-foreground">
-              New accounts default to the <strong>Nurse</strong> role. An admin can assign roles (Admin, Doctor, Emergency) after signup.
+              {isSignup 
+                ? "Select your role during signup. Your access level will be set based on the role you choose."
+                : "Sign in with your registered email and password. Your role determines which features you can access."}
             </p>
           </div>
         </motion.div>
