@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useWards } from "@/hooks/useDatabase";
-import { Settings, Users, Bell, Database } from "lucide-react";
+import { Settings, Users, Bell, Database, Zap } from "lucide-react";
 import type { Tables } from "@/integrations/supabase/types";
 
 type Profile = Tables<"profiles">;
@@ -18,6 +18,7 @@ export default function AdminSettings() {
   const [users, setUsers] = useState<UserWithRole[]>([]);
   const [thresholds, setThresholds] = useState<Record<string, number>>({});
   const [codeBlueTarget, setCodeBlueTarget] = useState("3");
+  const [escalationMinutes, setEscalationMinutes] = useState("5");
 
   useEffect(() => {
     // Initialize thresholds from wards
@@ -38,6 +39,13 @@ export default function AdminSettings() {
       }
     };
     fetchUsers();
+
+    // Fetch escalation threshold
+    const fetchSettings = async () => {
+      const { data } = await (supabase.from("system_settings" as any).select("*").eq("key", "code_blue_escalation_minutes").single() as any);
+      if (data) setEscalationMinutes(data.value);
+    };
+    fetchSettings();
   }, []);
 
   const updateThreshold = async (wardId: string, value: number) => {
@@ -48,6 +56,11 @@ export default function AdminSettings() {
   const updateUserRole = async (userId: string, newRole: string) => {
     await supabase.from("user_roles").update({ role: newRole as any }).eq("user_id", userId);
     setUsers((prev) => prev.map((u) => u.user_id === userId ? { ...u, role: newRole } : u));
+  };
+
+  const updateEscalationThreshold = async (value: string) => {
+    setEscalationMinutes(value);
+    await (supabase.from("system_settings" as any) as any).update({ value }).eq("key", "code_blue_escalation_minutes");
   };
 
   if (user?.role !== "admin") {
@@ -101,6 +114,19 @@ export default function AdminSettings() {
                 onChange={(e) => setCodeBlueTarget(e.target.value)}
                 className="w-full px-3 py-2 rounded-lg border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
               />
+            </div>
+            <div>
+              <label className="text-sm text-muted-foreground block mb-1.5">
+                <Zap className="w-3.5 h-3.5 inline mr-1" />
+                Auto-Escalation Threshold (minutes without response)
+              </label>
+              <input
+                type="number"
+                value={escalationMinutes}
+                onChange={(e) => updateEscalationThreshold(e.target.value)}
+                className="w-full px-3 py-2 rounded-lg border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+              />
+              <p className="text-xs text-muted-foreground mt-1">Code Blue events without a response within this time will be auto-escalated with a critical alert.</p>
             </div>
             <div className="space-y-2">
               {["Nurse shortage alerts", "Code Blue delay alerts", "High patient load alerts"].map((rule) => (

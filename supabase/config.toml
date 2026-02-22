@@ -1,1 +1,4 @@
 project_id = "gugqbdfmaogfjfjvzuel"
+
+[functions.code-blue-escalation]
+verify_jwt = false
