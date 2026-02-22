@@ -1,5 +1,6 @@
 import { usePatients, useNurses, useWards } from "@/hooks/useDatabase";
 import { AlertTriangle, CheckCircle } from "lucide-react";
+import RatioHeatmap from "@/components/RatioHeatmap";
 
 export default function RatioCalculation() {
   const { patients } = usePatients();
@@ -22,6 +23,14 @@ export default function RatioCalculation() {
         <p className="page-description">Real-time automated ratio calculations per ward with safety thresholds</p>
       </div>
 
+      {/* Real-time Ratio Heatmap */}
+      <div className="mb-6">
+        <h2 className="text-sm font-medium text-muted-foreground mb-3">Real-Time Ratio Heatmap</h2>
+        <RatioHeatmap />
+      </div>
+
+      {/* Detailed Ward Cards */}
+      <h2 className="text-sm font-medium text-muted-foreground mb-3">Detailed Ward Breakdown</h2>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
         {wardRatios.map((w) => (
           <div key={w.ward} className="kpi-card">

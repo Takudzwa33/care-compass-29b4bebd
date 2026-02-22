@@ -15,6 +15,7 @@ import AlertsNotifications from "@/pages/AlertsNotifications";
 import PatientFeedback from "@/pages/PatientFeedback";
 import ReportsAnalytics from "@/pages/ReportsAnalytics";
 import AdminSettings from "@/pages/AdminSettings";
+import AuditLog from "@/pages/AuditLog";
 import NotFound from "@/pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -56,6 +57,7 @@ function AppRoutes() {
       <Route path="/feedback" element={<ProtectedRoute><PatientFeedback /></ProtectedRoute>} />
       <Route path="/reports" element={<ProtectedRoute><ReportsAnalytics /></ProtectedRoute>} />
       <Route path="/admin" element={<ProtectedRoute><AdminSettings /></ProtectedRoute>} />
+      <Route path="/audit" element={<ProtectedRoute><AuditLog /></ProtectedRoute>} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   );

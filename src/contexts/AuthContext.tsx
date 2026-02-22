@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useEffect, ReactNode } from "react
 import { supabase } from "@/integrations/supabase/client";
 import type { User as SupabaseUser, Session } from "@supabase/supabase-js";
 import type { Enums } from "@/integrations/supabase/types";
+import { logLoginEvent } from "@/hooks/useLoginAudit";
 
 export type UserRole = Enums<"app_role">;
 
@@ -79,8 +80,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const login = async (email: string, password: string): Promise<string | null> => {
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    return error ? error.message : null;
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) {
+      logLoginEvent(null, email, "login_failed");
+      return error.message;
+    }
+    // Audit log will be inserted after profile is fetched (we need role)
+    if (data.user) {
+      const { data: roleData } = await supabase.from("user_roles").select("role").eq("user_id", data.user.id).maybeSingle();
+      logLoginEvent(data.user.id, email, "login_success", roleData?.role || "nurse");
+    }
+    return null;
   };
 
   const signup = async (email: string, password: string, fullName: string, role: UserRole): Promise<string | null> => {
@@ -93,6 +103,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const logout = async () => {
+    if (user) {
+      logLoginEvent(user.id, user.email, "logout", user.role);
+    }
     await supabase.auth.signOut();
     setUser(null);
     setSession(null);

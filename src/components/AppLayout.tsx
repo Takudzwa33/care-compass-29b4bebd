@@ -13,6 +13,7 @@ import {
   LogOut,
   Activity,
   Heart,
+  Shield,
 } from "lucide-react";
 
 const navItems = [
@@ -24,6 +25,7 @@ const navItems = [
   { to: "/alerts", label: "Alerts", icon: Bell, roles: ["admin", "nurse", "doctor", "emergency"] },
   { to: "/feedback", label: "Patient Feedback", icon: MessageSquare, roles: ["admin", "nurse", "doctor"] },
   { to: "/reports", label: "Reports", icon: BarChart3, roles: ["admin", "doctor"] },
+  { to: "/audit", label: "Access Audit", icon: Shield, roles: ["admin"] },
   { to: "/admin", label: "Admin Settings", icon: Settings, roles: ["admin"] },
 ];
 
