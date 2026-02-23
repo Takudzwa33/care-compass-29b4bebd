@@ -16,6 +16,8 @@ import PatientFeedback from "@/pages/PatientFeedback";
 import ReportsAnalytics from "@/pages/ReportsAnalytics";
 import AdminSettings from "@/pages/AdminSettings";
 import AuditLog from "@/pages/AuditLog";
+import EMRImport from "@/pages/EMRImport";
+import DataAuditLog from "@/pages/DataAuditLog";
 import NotFound from "@/pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -57,8 +59,10 @@ function AppRoutes() {
       <Route path="/feedback" element={<ProtectedRoute><PatientFeedback /></ProtectedRoute>} />
       <Route path="/reports" element={<ProtectedRoute><ReportsAnalytics /></ProtectedRoute>} />
       <Route path="/admin" element={<ProtectedRoute><AdminSettings /></ProtectedRoute>} />
-      <Route path="/audit" element={<ProtectedRoute><AuditLog /></ProtectedRoute>} />
-      <Route path="*" element={<NotFound />} />
+       <Route path="/audit" element={<ProtectedRoute><AuditLog /></ProtectedRoute>} />
+       <Route path="/emr-import" element={<ProtectedRoute><EMRImport /></ProtectedRoute>} />
+       <Route path="/data-audit" element={<ProtectedRoute><DataAuditLog /></ProtectedRoute>} />
+       <Route path="*" element={<NotFound />} />
     </Routes>
   );
 }
