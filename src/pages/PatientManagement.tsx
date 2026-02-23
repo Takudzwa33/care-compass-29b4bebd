@@ -46,38 +46,48 @@ export default function PatientManagement() {
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-border">
-                  <th className="text-left py-3 px-4 font-medium text-muted-foreground">ID</th>
-                  <th className="text-left py-3 px-4 font-medium text-muted-foreground">Name</th>
-                  <th className="text-left py-3 px-4 font-medium text-muted-foreground">Ward</th>
-                  <th className="text-left py-3 px-4 font-medium text-muted-foreground">Severity</th>
-                  <th className="text-left py-3 px-4 font-medium text-muted-foreground">Admission</th>
-                  <th className="text-left py-3 px-4 font-medium text-muted-foreground">Status</th>
-                  <th className="text-left py-3 px-4 font-medium text-muted-foreground">Nurse</th>
-                </tr>
+                 <tr className="border-b border-border">
+                   <th className="text-left py-3 px-4 font-medium text-muted-foreground">ID</th>
+                   <th className="text-left py-3 px-4 font-medium text-muted-foreground">Name</th>
+                   <th className="text-left py-3 px-4 font-medium text-muted-foreground">Ward</th>
+                   <th className="text-left py-3 px-4 font-medium text-muted-foreground">Severity</th>
+                   <th className="text-left py-3 px-4 font-medium text-muted-foreground">Diagnosis</th>
+                   <th className="text-left py-3 px-4 font-medium text-muted-foreground">Gender</th>
+                   <th className="text-left py-3 px-4 font-medium text-muted-foreground">Admission</th>
+                   <th className="text-left py-3 px-4 font-medium text-muted-foreground">Status</th>
+                   <th className="text-left py-3 px-4 font-medium text-muted-foreground">Nurse</th>
+                   <th className="text-left py-3 px-4 font-medium text-muted-foreground">Source</th>
+                 </tr>
               </thead>
               <tbody>
                 {filtered.length === 0 ? (
-                  <tr><td colSpan={7} className="py-12 text-center text-muted-foreground">No patients found</td></tr>
-                ) : filtered.map((p) => (
-                  <tr key={p.id} className="border-b border-border/50 hover:bg-muted/50 transition">
-                    <td className="py-3 px-4 font-mono text-xs">{p.patient_code}</td>
-                    <td className="py-3 px-4 font-medium">{p.full_name}</td>
-                    <td className="py-3 px-4">{wardMap[p.ward_id || ""] || "—"}</td>
-                    <td className="py-3 px-4">
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${p.severity === "Critical" ? "status-critical" : p.severity === "Serious" ? "status-warning" : "status-safe"}`}>
-                        {p.severity}
-                      </span>
-                    </td>
-                    <td className="py-3 px-4 text-muted-foreground">{new Date(p.admission_date).toLocaleDateString()}</td>
-                    <td className="py-3 px-4">
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${p.discharge_date ? "bg-muted text-muted-foreground" : "status-safe"}`}>
-                        {p.discharge_date ? "Discharged" : "Active"}
-                      </span>
-                    </td>
-                    <td className="py-3 px-4 font-mono text-xs">{nurseMap[p.assigned_nurse_id || ""] || "—"}</td>
-                  </tr>
-                ))}
+                  <tr><td colSpan={10} className="py-12 text-center text-muted-foreground">No patients found</td></tr>
+                 ) : filtered.map((p: any) => (
+                   <tr key={p.id} className="border-b border-border/50 hover:bg-muted/50 transition">
+                     <td className="py-3 px-4 font-mono text-xs">{p.patient_code}</td>
+                     <td className="py-3 px-4 font-medium">{p.full_name}</td>
+                     <td className="py-3 px-4">{wardMap[p.ward_id || ""] || "—"}</td>
+                     <td className="py-3 px-4">
+                       <span className={`px-2 py-1 rounded-full text-xs font-medium ${p.severity === "Critical" ? "status-critical" : p.severity === "Serious" ? "status-warning" : "status-safe"}`}>
+                         {p.severity}
+                       </span>
+                     </td>
+                     <td className="py-3 px-4 text-muted-foreground text-xs">{p.diagnosis || "—"}</td>
+                     <td className="py-3 px-4 text-xs">{p.gender || "—"}</td>
+                     <td className="py-3 px-4 text-muted-foreground">{new Date(p.admission_date).toLocaleDateString()}</td>
+                     <td className="py-3 px-4">
+                       <span className={`px-2 py-1 rounded-full text-xs font-medium ${p.discharge_date ? "bg-muted text-muted-foreground" : "status-safe"}`}>
+                         {p.discharge_date ? "Discharged" : "Active"}
+                       </span>
+                     </td>
+                     <td className="py-3 px-4 font-mono text-xs">{nurseMap[p.assigned_nurse_id || ""] || "—"}</td>
+                     <td className="py-3 px-4">
+                       <span className={`px-2 py-1 rounded-full text-xs ${p.import_source === "csv" ? "bg-accent text-accent-foreground" : "bg-muted text-muted-foreground"}`}>
+                         {p.import_source || "manual"}
+                       </span>
+                     </td>
+                   </tr>
+                 ))}
               </tbody>
             </table>
           </div>
