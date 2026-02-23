@@ -106,6 +106,84 @@ export type Database = {
           },
         ]
       }
+      data_audit_log: {
+        Row: {
+          changed_by: string | null
+          changed_fields: string[] | null
+          created_at: string
+          id: string
+          new_data: Json | null
+          old_data: Json | null
+          operation: string
+          record_id: string
+          table_name: string
+        }
+        Insert: {
+          changed_by?: string | null
+          changed_fields?: string[] | null
+          created_at?: string
+          id?: string
+          new_data?: Json | null
+          old_data?: Json | null
+          operation: string
+          record_id: string
+          table_name: string
+        }
+        Update: {
+          changed_by?: string | null
+          changed_fields?: string[] | null
+          created_at?: string
+          id?: string
+          new_data?: Json | null
+          old_data?: Json | null
+          operation?: string
+          record_id?: string
+          table_name?: string
+        }
+        Relationships: []
+      }
+      emr_import_batches: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          error_rows: number
+          errors: Json | null
+          file_name: string
+          id: string
+          imported_by: string | null
+          status: string
+          target_table: string
+          total_rows: number
+          valid_rows: number
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          error_rows?: number
+          errors?: Json | null
+          file_name: string
+          id?: string
+          imported_by?: string | null
+          status?: string
+          target_table: string
+          total_rows?: number
+          valid_rows?: number
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          error_rows?: number
+          errors?: Json | null
+          file_name?: string
+          id?: string
+          imported_by?: string | null
+          status?: string
+          target_table?: string
+          total_rows?: number
+          valid_rows?: number
+        }
+        Relationships: []
+      }
       login_audit_logs: {
         Row: {
           created_at: string
@@ -141,40 +219,58 @@ export type Database = {
       }
       nurses: {
         Row: {
+          contact_number: string | null
           created_at: string
           full_name: string
           id: string
+          import_source: string | null
+          imported_at: string | null
+          license_number: string | null
           nurse_code: string
           profile_id: string | null
           role_title: string
           shift: string
+          specialization: string | null
           status: string
           updated_at: string
           ward_id: string | null
+          years_of_experience: number | null
         }
         Insert: {
+          contact_number?: string | null
           created_at?: string
           full_name: string
           id?: string
+          import_source?: string | null
+          imported_at?: string | null
+          license_number?: string | null
           nurse_code: string
           profile_id?: string | null
           role_title?: string
           shift?: string
+          specialization?: string | null
           status?: string
           updated_at?: string
           ward_id?: string | null
+          years_of_experience?: number | null
         }
         Update: {
+          contact_number?: string | null
           created_at?: string
           full_name?: string
           id?: string
+          import_source?: string | null
+          imported_at?: string | null
+          license_number?: string | null
           nurse_code?: string
           profile_id?: string | null
           role_title?: string
           shift?: string
+          specialization?: string | null
           status?: string
           updated_at?: string
           ward_id?: string | null
+          years_of_experience?: number | null
         }
         Relationships: [
           {
@@ -251,10 +347,19 @@ export type Database = {
         Row: {
           admission_date: string
           assigned_nurse_id: string | null
+          blood_type: string | null
           created_at: string
+          date_of_birth: string | null
+          diagnosis: string | null
           discharge_date: string | null
+          emergency_contact: string | null
           full_name: string
+          gender: string | null
           id: string
+          import_source: string | null
+          imported_at: string | null
+          insurance_id: string | null
+          medical_record_number: string | null
           patient_code: string
           severity: string
           updated_at: string
@@ -263,10 +368,19 @@ export type Database = {
         Insert: {
           admission_date?: string
           assigned_nurse_id?: string | null
+          blood_type?: string | null
           created_at?: string
+          date_of_birth?: string | null
+          diagnosis?: string | null
           discharge_date?: string | null
+          emergency_contact?: string | null
           full_name: string
+          gender?: string | null
           id?: string
+          import_source?: string | null
+          imported_at?: string | null
+          insurance_id?: string | null
+          medical_record_number?: string | null
           patient_code: string
           severity?: string
           updated_at?: string
@@ -275,10 +389,19 @@ export type Database = {
         Update: {
           admission_date?: string
           assigned_nurse_id?: string | null
+          blood_type?: string | null
           created_at?: string
+          date_of_birth?: string | null
+          diagnosis?: string | null
           discharge_date?: string | null
+          emergency_contact?: string | null
           full_name?: string
+          gender?: string | null
           id?: string
+          import_source?: string | null
+          imported_at?: string | null
+          insurance_id?: string | null
+          medical_record_number?: string | null
           patient_code?: string
           severity?: string
           updated_at?: string
