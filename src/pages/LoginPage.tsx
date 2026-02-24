@@ -193,6 +193,14 @@ export default function LoginPage() {
             </button>
           </p>
 
+          {!isSignup && (
+            <p className="mt-2 text-center">
+              <a href="/forgot-password" className="text-xs text-muted-foreground hover:text-primary hover:underline transition">
+                Forgot your password?
+              </a>
+            </p>
+          )}
+
           <div className="mt-6 p-4 rounded-lg bg-muted">
             <p className="text-xs text-muted-foreground">
               {isSignup 
