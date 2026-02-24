@@ -6,6 +6,8 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import AppLayout from "@/components/AppLayout";
 import LoginPage from "@/pages/LoginPage";
+import ForgotPassword from "@/pages/ForgotPassword";
+import ResetPassword from "@/pages/ResetPassword";
 import Dashboard from "@/pages/Dashboard";
 import PatientManagement from "@/pages/PatientManagement";
 import NurseManagement from "@/pages/NurseManagement";
@@ -19,6 +21,7 @@ import AuditLog from "@/pages/AuditLog";
 import EMRImport from "@/pages/EMRImport";
 import DataAuditLog from "@/pages/DataAuditLog";
 import NotFound from "@/pages/NotFound";
+import AlertSoundProvider from "@/components/AlertSoundProvider";
 
 const queryClient = new QueryClient();
 
@@ -49,6 +52,8 @@ function AppRoutes() {
   return (
     <Routes>
       <Route path="/login" element={user ? <Navigate to="/dashboard" replace /> : <LoginPage />} />
+      <Route path="/forgot-password" element={user ? <Navigate to="/dashboard" replace /> : <ForgotPassword />} />
+      <Route path="/reset-password" element={<ResetPassword />} />
       <Route path="/" element={<Navigate to={user ? "/dashboard" : "/login"} replace />} />
       <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
       <Route path="/patients" element={<ProtectedRoute><PatientManagement /></ProtectedRoute>} />
@@ -74,6 +79,7 @@ const App = () => (
       <Sonner />
       <AuthProvider>
         <BrowserRouter>
+          <AlertSoundProvider />
           <AppRoutes />
         </BrowserRouter>
       </AuthProvider>
