@@ -1,16 +1,28 @@
-import { useCodeBlueEvents, useWards } from "@/hooks/useDatabase";
-import { AlertTriangle, Clock, Users, CheckCircle } from "lucide-react";
+import { useCodeBlueEvents, useWards, useAlerts } from "@/hooks/useDatabase";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { AlertTriangle, Clock, Users, CheckCircle, Zap, TrendingUp, TrendingDown } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import { toast } from "sonner";
+import { useState } from "react";
 
 export default function CodeBlueManagement() {
-  const { events, loading } = useCodeBlueEvents();
+  const { events, loading, refetch } = useCodeBlueEvents();
   const { wards } = useWards();
+  const { alerts } = useAlerts();
+  const { user } = useAuth();
+  const [responding, setResponding] = useState<string | null>(null);
 
   const wardMap = Object.fromEntries(wards.map((w) => [w.id, w.name]));
   const withResponse = events.filter((e) => e.response_minutes);
   const avg = withResponse.length > 0 ? (withResponse.reduce((s, e) => s + (e.response_minutes || 0), 0) / withResponse.length).toFixed(1) : "N/A";
   const fastest = withResponse.length > 0 ? Math.min(...withResponse.map((e) => e.response_minutes!)) : null;
   const slowest = withResponse.length > 0 ? Math.max(...withResponse.map((e) => e.response_minutes!)) : null;
+  const underThreshold = withResponse.filter((e) => (e.response_minutes || 0) <= 3).length;
+  const overThreshold = withResponse.filter((e) => (e.response_minutes || 0) > 3).length;
+
+  // Linked alerts for code blue events
+  const codeBlueAlerts = alerts.filter(a => a.alert_type === "critical" && a.message.toLowerCase().includes("code blue"));
 
   // Ward averages
   const wardAvg = Object.entries(
@@ -27,6 +39,35 @@ export default function CodeBlueManagement() {
     avg: +(times.reduce((s, t) => s + t, 0) / times.length).toFixed(1),
   }));
 
+  // Doctor responds to a code blue event
+  const respondToEvent = async (eventId: string) => {
+    setResponding(eventId);
+    const event = events.find(e => e.id === eventId);
+    if (!event) return;
+
+    const triggerTime = new Date(event.trigger_time).getTime();
+    const now = Date.now();
+    const responseMinutes = +((now - triggerTime) / 60000).toFixed(1);
+
+    const { error } = await supabase.from("code_blue_events").update({
+      response_time: new Date().toISOString(),
+      response_minutes: responseMinutes,
+      outcome: responseMinutes <= 3 ? "Resolved - Fast Response" : "Resolved - Delayed Response",
+      team_members: [...(event.team_members || []), user?.name || "Doctor"],
+    }).eq("id", eventId);
+
+    if (error) {
+      toast.error("Failed to record response");
+    } else {
+      toast.success(`Response recorded: ${responseMinutes} min`);
+      refetch();
+    }
+    setResponding(null);
+  };
+
+  const isDoctor = user?.role === "doctor" || user?.role === "admin";
+  const pendingEvents = events.filter(e => !e.response_minutes);
+
   return (
     <div>
       <div className="page-header">
@@ -34,29 +75,83 @@ export default function CodeBlueManagement() {
         <p className="page-description">Emergency response timeline and performance — real-time</p>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+      {/* KPI cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
         <div className="kpi-card">
           <div className="flex items-center gap-2 mb-2">
             <Clock className="w-4 h-4 text-warning" />
-            <span className="text-sm text-muted-foreground">Avg Response</span>
+            <span className="text-xs text-muted-foreground">Avg Response</span>
           </div>
-          <p className="text-3xl font-bold">{avg === "N/A" ? "N/A" : `${avg} min`}</p>
+          <p className="text-2xl font-bold">{avg === "N/A" ? "N/A" : `${avg} min`}</p>
+        </div>
+        <div className="kpi-card">
+          <div className="flex items-center gap-2 mb-2">
+            <TrendingDown className="w-4 h-4 text-success" />
+            <span className="text-xs text-muted-foreground">Fastest</span>
+          </div>
+          <p className="text-2xl font-bold text-success">{fastest !== null ? `${fastest} min` : "N/A"}</p>
+        </div>
+        <div className="kpi-card">
+          <div className="flex items-center gap-2 mb-2">
+            <TrendingUp className="w-4 h-4 text-destructive" />
+            <span className="text-xs text-muted-foreground">Slowest</span>
+          </div>
+          <p className="text-2xl font-bold text-destructive">{slowest !== null ? `${slowest} min` : "N/A"}</p>
         </div>
         <div className="kpi-card">
           <div className="flex items-center gap-2 mb-2">
             <CheckCircle className="w-4 h-4 text-success" />
-            <span className="text-sm text-muted-foreground">Fastest</span>
+            <span className="text-xs text-muted-foreground">Under 3 min</span>
           </div>
-          <p className="text-3xl font-bold text-success">{fastest !== null ? `${fastest} min` : "N/A"}</p>
+          <p className="text-2xl font-bold text-success">{underThreshold}</p>
         </div>
         <div className="kpi-card">
           <div className="flex items-center gap-2 mb-2">
             <AlertTriangle className="w-4 h-4 text-destructive" />
-            <span className="text-sm text-muted-foreground">Slowest</span>
+            <span className="text-xs text-muted-foreground">Over 3 min</span>
           </div>
-          <p className="text-3xl font-bold text-destructive">{slowest !== null ? `${slowest} min` : "N/A"}</p>
+          <p className="text-2xl font-bold text-destructive">{overThreshold}</p>
+        </div>
+        <div className="kpi-card">
+          <div className="flex items-center gap-2 mb-2">
+            <Zap className="w-4 h-4 text-warning" />
+            <span className="text-xs text-muted-foreground">Pending</span>
+          </div>
+          <p className="text-2xl font-bold text-warning">{pendingEvents.length}</p>
         </div>
       </div>
+
+      {/* Pending events for doctor response */}
+      {isDoctor && pendingEvents.length > 0 && (
+        <div className="kpi-card mb-6 border-warning/30">
+          <h3 className="text-sm font-medium text-warning mb-3 flex items-center gap-2">
+            <Zap className="w-4 h-4" /> Awaiting Doctor Response
+          </h3>
+          <div className="space-y-2">
+            {pendingEvents.map((e) => {
+              const waitMin = +((Date.now() - new Date(e.trigger_time).getTime()) / 60000).toFixed(1);
+              return (
+                <div key={e.id} className="flex items-center justify-between p-3 rounded-lg border border-border bg-muted/30">
+                  <div>
+                    <span className="text-sm font-medium">{wardMap[e.ward_id || ""] || "Unknown Ward"}</span>
+                    <span className="text-xs text-muted-foreground ml-3">Triggered {new Date(e.trigger_time).toLocaleString()}</span>
+                    <span className={`ml-3 text-xs font-medium ${waitMin > 3 ? "text-destructive" : "text-warning"}`}>
+                      Waiting: {waitMin} min
+                    </span>
+                  </div>
+                  <button
+                    disabled={responding === e.id}
+                    onClick={() => respondToEvent(e.id)}
+                    className="px-4 py-2 rounded-lg bg-primary text-primary-foreground text-xs font-medium hover:opacity-90 transition disabled:opacity-50"
+                  >
+                    {responding === e.id ? "Recording..." : "Respond Now"}
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="kpi-card">
@@ -93,7 +188,7 @@ export default function CodeBlueManagement() {
                     <div className="flex items-center justify-between">
                       <span className="text-sm font-medium">{wardMap[e.ward_id || ""] || "Unknown"}</span>
                       {e.response_minutes ? (
-                        <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${e.response_minutes <= 3 ? "status-safe" : "status-warning"}`}>
+                        <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${e.response_minutes <= 3 ? "status-safe" : "status-critical"}`}>
                           {e.response_minutes} min
                         </span>
                       ) : (
@@ -101,7 +196,7 @@ export default function CodeBlueManagement() {
                       )}
                     </div>
                     <p className="text-xs text-muted-foreground mt-1">
-                      {new Date(e.trigger_time).toLocaleString()} · {e.outcome || "In Progress"}
+                      {new Date(e.trigger_time).toLocaleString()} · {e.outcome || "Awaiting Response"}
                     </p>
                     {e.team_members && e.team_members.length > 0 && (
                       <div className="flex items-center gap-1 mt-1">
@@ -116,6 +211,23 @@ export default function CodeBlueManagement() {
           )}
         </div>
       </div>
+
+      {/* Linked alerts */}
+      {codeBlueAlerts.length > 0 && (
+        <div className="kpi-card mt-6">
+          <h3 className="text-sm font-medium text-muted-foreground mb-3">Linked Code Blue Alerts</h3>
+          <div className="space-y-2">
+            {codeBlueAlerts.slice(0, 10).map(a => (
+              <div key={a.id} className="flex items-center gap-3 p-2 rounded-lg bg-muted/30 text-sm">
+                <AlertTriangle className="w-3 h-3 text-destructive shrink-0" />
+                <span className="flex-1">{a.message}</span>
+                <span className="text-xs text-muted-foreground">{new Date(a.created_at).toLocaleString()}</span>
+                {a.acknowledged && <CheckCircle className="w-3 h-3 text-success" />}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
