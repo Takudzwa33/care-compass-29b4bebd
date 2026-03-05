@@ -361,6 +361,7 @@ export type Database = {
           insurance_id: string | null
           medical_record_number: string | null
           patient_code: string
+          patient_feedback_text: string | null
           severity: string
           updated_at: string
           ward_id: string | null
@@ -382,6 +383,7 @@ export type Database = {
           insurance_id?: string | null
           medical_record_number?: string | null
           patient_code: string
+          patient_feedback_text?: string | null
           severity?: string
           updated_at?: string
           ward_id?: string | null
@@ -403,6 +405,7 @@ export type Database = {
           insurance_id?: string | null
           medical_record_number?: string | null
           patient_code?: string
+          patient_feedback_text?: string | null
           severity?: string
           updated_at?: string
           ward_id?: string | null

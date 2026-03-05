@@ -1,8 +1,70 @@
 import { useWards, useCodeBlueEvents, useFeedback, usePatients, useNurses, useAlerts } from "@/hooks/useDatabase";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from "recharts";
-import { Download, Clock, AlertTriangle, TrendingUp, CheckCircle } from "lucide-react";
+import { Download, Clock, AlertTriangle, TrendingUp, CheckCircle, FileText } from "lucide-react";
+import { toast } from "sonner";
 
 const COLORS = ["hsl(213,56%,24%)", "hsl(174,62%,38%)", "hsl(38,92%,50%)", "hsl(152,60%,40%)", "hsl(205,80%,56%)"];
+
+function exportPDF(data: {
+  avgResponse: string; fastest: number | null; slowest: number | null;
+  underThreshold: number; overThreshold: number; acknowledgementRate: string;
+  totalAlerts: number; criticalAlerts: number; codeBlueCount: number;
+  avgSatisfaction: string; avgWaitTime: string;
+  wardCodeBlue: { ward: string; events: number; avgResponse: number; alerts: number }[];
+}) {
+  import("jspdf").then(({ jsPDF }) => {
+    import("jspdf-autotable").then((autoTableModule) => {
+      const doc = new jsPDF();
+      const now = new Date().toLocaleString();
+
+      doc.setFontSize(18);
+      doc.text("Hospital Reports & Analytics", 14, 20);
+      doc.setFontSize(10);
+      doc.setTextColor(100);
+      doc.text(`Generated: ${now}`, 14, 28);
+
+      doc.setFontSize(12);
+      doc.setTextColor(0);
+      doc.text("Key Performance Indicators", 14, 40);
+
+      const kpiData = [
+        ["Avg Response Time", `${data.avgResponse} min`],
+        ["Fastest Response", data.fastest !== null ? `${data.fastest} min` : "N/A"],
+        ["Slowest Response", data.slowest !== null ? `${data.slowest} min` : "N/A"],
+        ["Under 3 min", String(data.underThreshold)],
+        ["Over 3 min", String(data.overThreshold)],
+        ["Acknowledgement Rate", `${data.acknowledgementRate}%`],
+        ["Total Alerts", String(data.totalAlerts)],
+        ["Critical Alerts", String(data.criticalAlerts)],
+        ["Total Code Blues", String(data.codeBlueCount)],
+        ["Avg Satisfaction", data.avgSatisfaction],
+        ["Avg Wait Time", `${data.avgWaitTime} min`],
+      ];
+
+      (doc as any).autoTable({
+        startY: 45,
+        head: [["Metric", "Value"]],
+        body: kpiData,
+        theme: "grid",
+        headStyles: { fillColor: [30, 58, 95] },
+      });
+
+      const afterKpi = (doc as any).lastAutoTable.finalY + 10;
+      doc.text("Ward Performance", 14, afterKpi);
+
+      (doc as any).autoTable({
+        startY: afterKpi + 5,
+        head: [["Ward", "Code Blues", "Avg Response (min)", "Alerts"]],
+        body: data.wardCodeBlue.map(w => [w.ward, w.events, w.avgResponse, w.alerts]),
+        theme: "grid",
+        headStyles: { fillColor: [30, 58, 95] },
+      });
+
+      doc.save(`hospital-report-${new Date().toISOString().slice(0, 10)}.pdf`);
+      toast.success("PDF report downloaded");
+    });
+  });
+}
 
 export default function ReportsAnalytics() {
   const { patients } = usePatients();
@@ -14,13 +76,11 @@ export default function ReportsAnalytics() {
 
   const wardMap = Object.fromEntries(wards.map((w) => [w.id, w.name]));
 
-  // Patient distribution
   const wardPatientData = wards.map((w) => ({
     name: w.name,
     value: patients.filter((p) => p.ward_id === w.id && !p.discharge_date).length,
   }));
 
-  // Code blue response stats
   const withResponse = codeBlueEvents.filter((e) => e.response_minutes);
   const avgResponse = withResponse.length > 0
     ? (withResponse.reduce((s, e) => s + (e.response_minutes || 0), 0) / withResponse.length).toFixed(1)
@@ -29,27 +89,17 @@ export default function ReportsAnalytics() {
   const slowest = withResponse.length > 0 ? Math.max(...withResponse.map(e => e.response_minutes!)) : null;
   const underThreshold = withResponse.filter(e => (e.response_minutes || 0) <= 3).length;
   const overThreshold = withResponse.filter(e => (e.response_minutes || 0) > 3).length;
-
-  // Average waiting time (from alert creation to acknowledgment using code blue response data)
   const avgWaitTime = avgResponse;
 
-  // Alert statistics
   const totalAlerts = alerts.length;
   const criticalAlerts = alerts.filter(a => a.alert_type === "critical").length;
   const acknowledgedAlerts = alerts.filter(a => a.acknowledged).length;
   const acknowledgementRate = totalAlerts > 0 ? ((acknowledgedAlerts / totalAlerts) * 100).toFixed(0) : "0";
 
-  // Response time trend (last 20 code blues)
-  const responseTrend = withResponse
-    .slice(0, 20)
-    .reverse()
-    .map((e, i) => ({
-      event: `#${i + 1}`,
-      time: e.response_minutes,
-      threshold: 3,
-    }));
+  const responseTrend = withResponse.slice(0, 20).reverse().map((e, i) => ({
+    event: `#${i + 1}`, time: e.response_minutes, threshold: 3,
+  }));
 
-  // Alert distribution by type
   const alertDistribution = [
     { name: "Critical", value: alerts.filter(a => a.alert_type === "critical").length },
     { name: "Warning", value: alerts.filter(a => a.alert_type === "warning").length },
@@ -58,7 +108,6 @@ export default function ReportsAnalytics() {
 
   const alertColors = ["hsl(0,72%,51%)", "hsl(38,92%,50%)", "hsl(205,80%,56%)"];
 
-  // Ward-level code blue data
   const wardCodeBlue = wards.map(w => {
     const wardEvents = codeBlueEvents.filter(e => e.ward_id === w.id && e.response_minutes);
     const wardAlerts = alerts.filter(a => a.ward_id === w.id);
@@ -72,6 +121,17 @@ export default function ReportsAnalytics() {
     };
   }).filter(w => w.events > 0 || w.alerts > 0);
 
+  const avgSatisfaction = feedback.length > 0 ? `${(feedback.reduce((s, f) => s + f.satisfaction, 0) / feedback.length).toFixed(1)}/5` : "N/A";
+
+  const handleExport = () => {
+    exportPDF({
+      avgResponse, fastest, slowest, underThreshold, overThreshold,
+      acknowledgementRate, totalAlerts, criticalAlerts,
+      codeBlueCount: codeBlueEvents.length, avgSatisfaction, avgWaitTime,
+      wardCodeBlue,
+    });
+  };
+
   return (
     <div>
       <div className="page-header flex items-center justify-between">
@@ -79,60 +139,23 @@ export default function ReportsAnalytics() {
           <h1 className="page-title">Reports & Analytics</h1>
           <p className="page-description">Decision-making insights linking alerts, code blues, and performance</p>
         </div>
-        <button className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition">
-          <Download className="w-4 h-4" />
+        <button onClick={handleExport} className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition">
+          <FileText className="w-4 h-4" />
           Export PDF
         </button>
       </div>
 
       {/* Summary KPIs */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
-        <div className="kpi-card">
-          <div className="flex items-center gap-2 mb-1">
-            <Clock className="w-4 h-4 text-warning" />
-            <span className="text-xs text-muted-foreground">Avg Wait Time</span>
-          </div>
-          <p className="text-2xl font-bold">{avgWaitTime} min</p>
-        </div>
-        <div className="kpi-card">
-          <div className="flex items-center gap-2 mb-1">
-            <TrendingUp className="w-4 h-4 text-success" />
-            <span className="text-xs text-muted-foreground">Fastest</span>
-          </div>
-          <p className="text-2xl font-bold text-success">{fastest !== null ? `${fastest} min` : "N/A"}</p>
-        </div>
-        <div className="kpi-card">
-          <div className="flex items-center gap-2 mb-1">
-            <AlertTriangle className="w-4 h-4 text-destructive" />
-            <span className="text-xs text-muted-foreground">Slowest</span>
-          </div>
-          <p className="text-2xl font-bold text-destructive">{slowest !== null ? `${slowest} min` : "N/A"}</p>
-        </div>
-        <div className="kpi-card">
-          <div className="flex items-center gap-2 mb-1">
-            <CheckCircle className="w-4 h-4 text-success" />
-            <span className="text-xs text-muted-foreground">Under 3 min</span>
-          </div>
-          <p className="text-2xl font-bold text-success">{underThreshold}</p>
-        </div>
-        <div className="kpi-card">
-          <div className="flex items-center gap-2 mb-1">
-            <AlertTriangle className="w-4 h-4 text-destructive" />
-            <span className="text-xs text-muted-foreground">Over 3 min</span>
-          </div>
-          <p className="text-2xl font-bold text-destructive">{overThreshold}</p>
-        </div>
-        <div className="kpi-card">
-          <div className="flex items-center gap-2 mb-1">
-            <CheckCircle className="w-4 h-4 text-info" />
-            <span className="text-xs text-muted-foreground">Ack Rate</span>
-          </div>
-          <p className="text-2xl font-bold">{acknowledgementRate}%</p>
-        </div>
+        <div className="kpi-card"><div className="flex items-center gap-2 mb-1"><Clock className="w-4 h-4 text-warning" /><span className="text-xs text-muted-foreground">Avg Wait Time</span></div><p className="text-2xl font-bold">{avgWaitTime} min</p></div>
+        <div className="kpi-card"><div className="flex items-center gap-2 mb-1"><TrendingUp className="w-4 h-4 text-success" /><span className="text-xs text-muted-foreground">Fastest</span></div><p className="text-2xl font-bold text-success">{fastest !== null ? `${fastest} min` : "N/A"}</p></div>
+        <div className="kpi-card"><div className="flex items-center gap-2 mb-1"><AlertTriangle className="w-4 h-4 text-destructive" /><span className="text-xs text-muted-foreground">Slowest</span></div><p className="text-2xl font-bold text-destructive">{slowest !== null ? `${slowest} min` : "N/A"}</p></div>
+        <div className="kpi-card"><div className="flex items-center gap-2 mb-1"><CheckCircle className="w-4 h-4 text-success" /><span className="text-xs text-muted-foreground">Under 3 min</span></div><p className="text-2xl font-bold text-success">{underThreshold}</p></div>
+        <div className="kpi-card"><div className="flex items-center gap-2 mb-1"><AlertTriangle className="w-4 h-4 text-destructive" /><span className="text-xs text-muted-foreground">Over 3 min</span></div><p className="text-2xl font-bold text-destructive">{overThreshold}</p></div>
+        <div className="kpi-card"><div className="flex items-center gap-2 mb-1"><CheckCircle className="w-4 h-4 text-info" /><span className="text-xs text-muted-foreground">Ack Rate</span></div><p className="text-2xl font-bold">{acknowledgementRate}%</p></div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-        {/* Response time trend */}
         <div className="kpi-card">
           <h3 className="text-sm font-medium text-muted-foreground mb-4">Response Time Trend</h3>
           {responseTrend.length > 0 ? (
@@ -151,16 +174,13 @@ export default function ReportsAnalytics() {
           )}
         </div>
 
-        {/* Alert distribution */}
         <div className="kpi-card">
           <h3 className="text-sm font-medium text-muted-foreground mb-4">Alert Distribution</h3>
           {alertDistribution.length > 0 ? (
             <ResponsiveContainer width="100%" height={280}>
               <PieChart>
                 <Pie data={alertDistribution} cx="50%" cy="50%" outerRadius={100} dataKey="value" label={({ name, value }) => `${name}: ${value}`}>
-                  {alertDistribution.map((_, i) => (
-                    <Cell key={i} fill={alertColors[i % alertColors.length]} />
-                  ))}
+                  {alertDistribution.map((_, i) => <Cell key={i} fill={alertColors[i % alertColors.length]} />)}
                 </Pie>
                 <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8 }} />
               </PieChart>
@@ -172,7 +192,6 @@ export default function ReportsAnalytics() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-        {/* Ward-level performance */}
         <div className="kpi-card">
           <h3 className="text-sm font-medium text-muted-foreground mb-4">Ward Performance (Code Blue + Alerts)</h3>
           {wardCodeBlue.length > 0 ? (
@@ -192,16 +211,13 @@ export default function ReportsAnalytics() {
           )}
         </div>
 
-        {/* Patient distribution */}
         <div className="kpi-card">
           <h3 className="text-sm font-medium text-muted-foreground mb-4">Patient Distribution by Ward</h3>
           {wardPatientData.some((d) => d.value > 0) ? (
             <ResponsiveContainer width="100%" height={280}>
               <PieChart>
                 <Pie data={wardPatientData.filter((d) => d.value > 0)} cx="50%" cy="50%" outerRadius={100} dataKey="value" label={({ name, value }) => `${name}: ${value}`}>
-                  {wardPatientData.map((_, i) => (
-                    <Cell key={i} fill={COLORS[i % COLORS.length]} />
-                  ))}
+                  {wardPatientData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
                 </Pie>
                 <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8 }} />
               </PieChart>
@@ -212,30 +228,14 @@ export default function ReportsAnalytics() {
         </div>
       </div>
 
-      {/* Detailed summary table */}
       <div className="kpi-card">
         <h3 className="text-sm font-medium text-muted-foreground mb-4">Code Blue & Alert Summary</h3>
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-          <div className="p-3 rounded-lg bg-muted/50">
-            <span className="text-xs text-muted-foreground">Total Code Blues</span>
-            <p className="text-xl font-bold mt-1">{codeBlueEvents.length}</p>
-          </div>
-          <div className="p-3 rounded-lg bg-muted/50">
-            <span className="text-xs text-muted-foreground">Total Alerts</span>
-            <p className="text-xl font-bold mt-1">{totalAlerts}</p>
-          </div>
-          <div className="p-3 rounded-lg bg-muted/50">
-            <span className="text-xs text-muted-foreground">Critical Alerts</span>
-            <p className="text-xl font-bold mt-1 text-destructive">{criticalAlerts}</p>
-          </div>
-          <div className="p-3 rounded-lg bg-muted/50">
-            <span className="text-xs text-muted-foreground">Avg Satisfaction</span>
-            <p className="text-xl font-bold mt-1">{feedback.length > 0 ? `${(feedback.reduce((s, f) => s + f.satisfaction, 0) / feedback.length).toFixed(1)}/5` : "N/A"}</p>
-          </div>
-          <div className="p-3 rounded-lg bg-muted/50">
-            <span className="text-xs text-muted-foreground">Avg Wait Time</span>
-            <p className="text-xl font-bold mt-1">{avgWaitTime} min</p>
-          </div>
+          <div className="p-3 rounded-lg bg-muted/50"><span className="text-xs text-muted-foreground">Total Code Blues</span><p className="text-xl font-bold mt-1">{codeBlueEvents.length}</p></div>
+          <div className="p-3 rounded-lg bg-muted/50"><span className="text-xs text-muted-foreground">Total Alerts</span><p className="text-xl font-bold mt-1">{totalAlerts}</p></div>
+          <div className="p-3 rounded-lg bg-muted/50"><span className="text-xs text-muted-foreground">Critical Alerts</span><p className="text-xl font-bold mt-1 text-destructive">{criticalAlerts}</p></div>
+          <div className="p-3 rounded-lg bg-muted/50"><span className="text-xs text-muted-foreground">Avg Satisfaction</span><p className="text-xl font-bold mt-1">{avgSatisfaction}</p></div>
+          <div className="p-3 rounded-lg bg-muted/50"><span className="text-xs text-muted-foreground">Avg Wait Time</span><p className="text-xl font-bold mt-1">{avgWaitTime} min</p></div>
         </div>
       </div>
     </div>
