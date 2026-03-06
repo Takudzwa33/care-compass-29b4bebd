@@ -1,5 +1,6 @@
 import { NavLink, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import NotificationBell from "@/components/NotificationBell";
 import {
   LayoutDashboard,
   Users,
@@ -98,6 +99,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
       {/* Main content */}
       <main className="flex-1 overflow-y-auto bg-background">
+        <div className="sticky top-0 z-30 bg-background/80 backdrop-blur-sm border-b border-border px-6 py-2 flex justify-end">
+          <NotificationBell />
+        </div>
         <div className="p-6 max-w-[1400px] mx-auto">
           {children}
         </div>
