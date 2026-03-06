@@ -23,7 +23,7 @@ const navItems = [
   { to: "/patients", label: "Patients", icon: Users, roles: ["admin", "nurse", "doctor"] },
   { to: "/nurses", label: "Nurse Management", icon: Stethoscope, roles: ["admin", "nurse"] },
   { to: "/ratios", label: "Nurse-Patient Ratio", icon: Calculator, roles: ["admin", "nurse", "doctor"] },
-  { to: "/code-blue", label: "Code Blue", icon: AlertTriangle, roles: ["admin", "doctor", "emergency"] },
+  { to: "/code-blue", label: "Code Blue", icon: AlertTriangle, roles: ["admin", "nurse", "doctor", "emergency"] },
   { to: "/alerts", label: "Alerts", icon: Bell, roles: ["admin", "nurse", "doctor", "emergency"] },
   { to: "/feedback", label: "Patient Feedback", icon: MessageSquare, roles: ["admin", "nurse", "doctor"] },
   { to: "/reports", label: "Reports", icon: BarChart3, roles: ["admin", "doctor"] },
