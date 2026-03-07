@@ -63,9 +63,8 @@ export default function NurseManagement() {
                  <tr className="border-b border-border">
                    <th className="text-left py-3 px-4 font-medium text-muted-foreground">ID</th>
                    <th className="text-left py-3 px-4 font-medium text-muted-foreground">Name</th>
-                   <th className="text-left py-3 px-4 font-medium text-muted-foreground">Role</th>
-                   <th className="text-left py-3 px-4 font-medium text-muted-foreground">Specialization</th>
-                   <th className="text-left py-3 px-4 font-medium text-muted-foreground">Ward</th>
+                    <th className="text-left py-3 px-4 font-medium text-muted-foreground">Role</th>
+                    <th className="text-left py-3 px-4 font-medium text-muted-foreground">Ward</th>
                    <th className="text-left py-3 px-4 font-medium text-muted-foreground">Shift</th>
                    <th className="text-left py-3 px-4 font-medium text-muted-foreground">Status</th>
                    <th className="text-left py-3 px-4 font-medium text-muted-foreground">Exp</th>
