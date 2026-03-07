@@ -63,9 +63,8 @@ export default function NurseManagement() {
                  <tr className="border-b border-border">
                    <th className="text-left py-3 px-4 font-medium text-muted-foreground">ID</th>
                    <th className="text-left py-3 px-4 font-medium text-muted-foreground">Name</th>
-                   <th className="text-left py-3 px-4 font-medium text-muted-foreground">Role</th>
-                   <th className="text-left py-3 px-4 font-medium text-muted-foreground">Specialization</th>
-                   <th className="text-left py-3 px-4 font-medium text-muted-foreground">Ward</th>
+                    <th className="text-left py-3 px-4 font-medium text-muted-foreground">Role</th>
+                    <th className="text-left py-3 px-4 font-medium text-muted-foreground">Ward</th>
                    <th className="text-left py-3 px-4 font-medium text-muted-foreground">Shift</th>
                    <th className="text-left py-3 px-4 font-medium text-muted-foreground">Status</th>
                    <th className="text-left py-3 px-4 font-medium text-muted-foreground">Exp</th>
@@ -73,14 +72,13 @@ export default function NurseManagement() {
               </thead>
               <tbody>
                 {filtered.length === 0 ? (
-                   <tr><td colSpan={8} className="py-12 text-center text-muted-foreground">No nurses found</td></tr>
+                   <tr><td colSpan={7} className="py-12 text-center text-muted-foreground">No nurses found</td></tr>
                  ) : filtered.map((n: any) => (
                    <tr key={n.id} className="border-b border-border/50 hover:bg-muted/50 transition">
                      <td className="py-3 px-4 font-mono text-xs">{n.nurse_code}</td>
                      <td className="py-3 px-4 font-medium">{n.full_name}</td>
-                     <td className="py-3 px-4">{n.role_title}</td>
-                     <td className="py-3 px-4 text-xs">{n.specialization || "—"}</td>
-                     <td className="py-3 px-4">{wardMap[n.ward_id || ""] || "—"}</td>
+                      <td className="py-3 px-4">{n.role_title}</td>
+                      <td className="py-3 px-4">{wardMap[n.ward_id || ""] || "—"}</td>
                      <td className="py-3 px-4">{n.shift}</td>
                      <td className="py-3 px-4">
                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${n.status === "On-Duty" ? "status-safe" : "bg-muted text-muted-foreground"}`}>

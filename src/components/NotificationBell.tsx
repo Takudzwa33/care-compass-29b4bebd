@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { Bell, AlertTriangle, Info, AlertCircle, CheckCircle } from "lucide-react";
+import { Bell, AlertTriangle, Info, AlertCircle, CheckCircle, Volume2, VolumeX } from "lucide-react";
 import { useAlerts } from "@/hooks/useDatabase";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -9,6 +9,10 @@ export default function NotificationBell() {
   const { alerts } = useAlerts();
   const { user } = useAuth();
   const [open, setOpen] = useState(false);
+  const [soundEnabled, setSoundEnabled] = useState(() => {
+    const stored = localStorage.getItem("alert-sound-enabled");
+    return stored !== "false";
+  });
   const ref = useRef<HTMLDivElement>(null);
 
   const unread = alerts.filter((a) => !a.acknowledged);
@@ -56,7 +60,21 @@ export default function NotificationBell() {
         <div className="absolute right-0 top-full mt-2 w-80 max-h-96 overflow-y-auto rounded-xl border border-border bg-card shadow-lg z-50">
           <div className="p-3 border-b border-border flex items-center justify-between">
             <span className="text-sm font-semibold">Notifications</span>
-            <span className="text-xs text-muted-foreground">{count} unread</span>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => {
+                  const next = !soundEnabled;
+                  setSoundEnabled(next);
+                  localStorage.setItem("alert-sound-enabled", String(next));
+                  toast.info(next ? "Alert sounds on" : "Alert sounds muted");
+                }}
+                className="p-1 rounded hover:bg-muted transition"
+                title={soundEnabled ? "Mute sounds" : "Unmute sounds"}
+              >
+                {soundEnabled ? <Volume2 className="w-3.5 h-3.5 text-muted-foreground" /> : <VolumeX className="w-3.5 h-3.5 text-muted-foreground" />}
+              </button>
+              <span className="text-xs text-muted-foreground">{count} unread</span>
+            </div>
           </div>
 
           {alerts.length === 0 ? (

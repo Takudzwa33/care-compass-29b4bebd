@@ -34,28 +34,7 @@ export default function PatientManagement() {
     setAssigning(null);
   };
 
-  // Save patient feedback text
-  const saveFeedback = async (patientId: string, text: string) => {
-    const { error } = await supabase.from("patients").update({ patient_feedback_text: text } as any).eq("id", patientId);
-    if (error) toast.error("Failed to save feedback");
-    else {
-      // Also create a patient_feedback record from this text
-      const patient = patients.find(p => p.id === patientId);
-      if (patient && text.trim()) {
-        await supabase.from("patient_feedback").insert({
-          patient_id: patientId,
-          patient_name: patient.full_name,
-          ward_id: patient.ward_id,
-          satisfaction: 3,
-          nurse_responsiveness: 3,
-          overall_experience: 3,
-          comments: text,
-        });
-      }
-      toast.success("Feedback saved and synced");
-      refetch();
-    }
-  };
+
 
   return (
     <div>
@@ -134,18 +113,9 @@ export default function PatientManagement() {
                         <span className="text-xs">{nurseNameMap[p.assigned_nurse_id || ""] || "—"}</span>
                       )}
                     </td>
-                    <td className="py-3 px-4">
-                      <input
-                        defaultValue={p.patient_feedback_text || ""}
-                        placeholder="Enter feedback..."
-                        onBlur={(e) => {
-                          if (e.target.value !== (p.patient_feedback_text || "")) {
-                            saveFeedback(p.id, e.target.value);
-                          }
-                        }}
-                        className="px-2 py-1 rounded border border-input bg-background text-xs w-full min-w-[140px]"
-                      />
-                    </td>
+                     <td className="py-3 px-4 text-xs text-muted-foreground max-w-[200px] truncate" title={p.patient_feedback_text || ""}>
+                       {p.patient_feedback_text || "—"}
+                     </td>
                   </tr>
                 ))}
               </tbody>
