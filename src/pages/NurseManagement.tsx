@@ -72,7 +72,7 @@ export default function NurseManagement() {
               </thead>
               <tbody>
                 {filtered.length === 0 ? (
-                   <tr><td colSpan={8} className="py-12 text-center text-muted-foreground">No nurses found</td></tr>
+                   <tr><td colSpan={7} className="py-12 text-center text-muted-foreground">No nurses found</td></tr>
                  ) : filtered.map((n: any) => (
                    <tr key={n.id} className="border-b border-border/50 hover:bg-muted/50 transition">
                      <td className="py-3 px-4 font-mono text-xs">{n.nurse_code}</td>
