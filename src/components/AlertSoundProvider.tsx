@@ -26,7 +26,7 @@ export default function AlertSoundProvider() {
             description: `${alert.alert_type.toUpperCase()} alert`,
           }
         );
-        if (isCritical && audioRef.current) {
+        if (isCritical && audioRef.current && localStorage.getItem("alert-sound-enabled") !== "false") {
           audioRef.current.play().catch(() => {});
         }
       });

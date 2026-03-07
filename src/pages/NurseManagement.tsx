@@ -77,9 +77,8 @@ export default function NurseManagement() {
                    <tr key={n.id} className="border-b border-border/50 hover:bg-muted/50 transition">
                      <td className="py-3 px-4 font-mono text-xs">{n.nurse_code}</td>
                      <td className="py-3 px-4 font-medium">{n.full_name}</td>
-                     <td className="py-3 px-4">{n.role_title}</td>
-                     <td className="py-3 px-4 text-xs">{n.specialization || "—"}</td>
-                     <td className="py-3 px-4">{wardMap[n.ward_id || ""] || "—"}</td>
+                      <td className="py-3 px-4">{n.role_title}</td>
+                      <td className="py-3 px-4">{wardMap[n.ward_id || ""] || "—"}</td>
                      <td className="py-3 px-4">{n.shift}</td>
                      <td className="py-3 px-4">
                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${n.status === "On-Duty" ? "status-safe" : "bg-muted text-muted-foreground"}`}>

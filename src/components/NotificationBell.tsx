@@ -60,7 +60,21 @@ export default function NotificationBell() {
         <div className="absolute right-0 top-full mt-2 w-80 max-h-96 overflow-y-auto rounded-xl border border-border bg-card shadow-lg z-50">
           <div className="p-3 border-b border-border flex items-center justify-between">
             <span className="text-sm font-semibold">Notifications</span>
-            <span className="text-xs text-muted-foreground">{count} unread</span>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => {
+                  const next = !soundEnabled;
+                  setSoundEnabled(next);
+                  localStorage.setItem("alert-sound-enabled", String(next));
+                  toast.info(next ? "Alert sounds on" : "Alert sounds muted");
+                }}
+                className="p-1 rounded hover:bg-muted transition"
+                title={soundEnabled ? "Mute sounds" : "Unmute sounds"}
+              >
+                {soundEnabled ? <Volume2 className="w-3.5 h-3.5 text-muted-foreground" /> : <VolumeX className="w-3.5 h-3.5 text-muted-foreground" />}
+              </button>
+              <span className="text-xs text-muted-foreground">{count} unread</span>
+            </div>
           </div>
 
           {alerts.length === 0 ? (

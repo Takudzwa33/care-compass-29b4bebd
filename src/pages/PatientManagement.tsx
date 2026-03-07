@@ -134,18 +134,9 @@ export default function PatientManagement() {
                         <span className="text-xs">{nurseNameMap[p.assigned_nurse_id || ""] || "—"}</span>
                       )}
                     </td>
-                    <td className="py-3 px-4">
-                      <input
-                        defaultValue={p.patient_feedback_text || ""}
-                        placeholder="Enter feedback..."
-                        onBlur={(e) => {
-                          if (e.target.value !== (p.patient_feedback_text || "")) {
-                            saveFeedback(p.id, e.target.value);
-                          }
-                        }}
-                        className="px-2 py-1 rounded border border-input bg-background text-xs w-full min-w-[140px]"
-                      />
-                    </td>
+                     <td className="py-3 px-4 text-xs text-muted-foreground max-w-[200px] truncate" title={p.patient_feedback_text || ""}>
+                       {p.patient_feedback_text || "—"}
+                     </td>
                   </tr>
                 ))}
               </tbody>
