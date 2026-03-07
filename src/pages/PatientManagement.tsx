@@ -34,28 +34,7 @@ export default function PatientManagement() {
     setAssigning(null);
   };
 
-  // Save patient feedback text
-  const saveFeedback = async (patientId: string, text: string) => {
-    const { error } = await supabase.from("patients").update({ patient_feedback_text: text } as any).eq("id", patientId);
-    if (error) toast.error("Failed to save feedback");
-    else {
-      // Also create a patient_feedback record from this text
-      const patient = patients.find(p => p.id === patientId);
-      if (patient && text.trim()) {
-        await supabase.from("patient_feedback").insert({
-          patient_id: patientId,
-          patient_name: patient.full_name,
-          ward_id: patient.ward_id,
-          satisfaction: 3,
-          nurse_responsiveness: 3,
-          overall_experience: 3,
-          comments: text,
-        });
-      }
-      toast.success("Feedback saved and synced");
-      refetch();
-    }
-  };
+
 
   return (
     <div>
