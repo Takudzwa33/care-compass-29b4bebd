@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { Bell, AlertTriangle, Info, AlertCircle, CheckCircle } from "lucide-react";
+import { Bell, AlertTriangle, Info, AlertCircle, CheckCircle, Volume2, VolumeX } from "lucide-react";
 import { useAlerts } from "@/hooks/useDatabase";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -9,6 +9,10 @@ export default function NotificationBell() {
   const { alerts } = useAlerts();
   const { user } = useAuth();
   const [open, setOpen] = useState(false);
+  const [soundEnabled, setSoundEnabled] = useState(() => {
+    const stored = localStorage.getItem("alert-sound-enabled");
+    return stored !== "false";
+  });
   const ref = useRef<HTMLDivElement>(null);
 
   const unread = alerts.filter((a) => !a.acknowledged);
