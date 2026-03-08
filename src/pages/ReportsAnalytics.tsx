@@ -1,7 +1,22 @@
+import { useState, useMemo } from "react";
 import { useWards, useCodeBlueEvents, useFeedback, usePatients, useNurses, useAlerts } from "@/hooks/useDatabase";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, Legend } from "recharts";
-import { Download, Clock, AlertTriangle, TrendingUp, CheckCircle, FileText, Users, Stethoscope, TableIcon } from "lucide-react";
+import { Download, Clock, AlertTriangle, TrendingUp, CheckCircle, FileText, Users, Stethoscope, TableIcon, CalendarIcon } from "lucide-react";
 import { toast } from "sonner";
+import { format, subDays, subMonths, startOfDay, endOfDay, isWithinInterval } from "date-fns";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+
+const DATE_PRESETS = [
+  { label: "All Time", value: "all" },
+  { label: "Today", value: "today" },
+  { label: "7 Days", value: "7d" },
+  { label: "30 Days", value: "30d" },
+  { label: "90 Days", value: "90d" },
+  { label: "Custom", value: "custom" },
+] as const;
 
 const COLORS = ["hsl(213,56%,24%)", "hsl(174,62%,38%)", "hsl(38,92%,50%)", "hsl(152,60%,40%)", "hsl(205,80%,56%)"];
 
