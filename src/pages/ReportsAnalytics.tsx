@@ -1,6 +1,6 @@
 import { useWards, useCodeBlueEvents, useFeedback, usePatients, useNurses, useAlerts } from "@/hooks/useDatabase";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from "recharts";
-import { Download, Clock, AlertTriangle, TrendingUp, CheckCircle, FileText } from "lucide-react";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, Legend } from "recharts";
+import { Download, Clock, AlertTriangle, TrendingUp, CheckCircle, FileText, Users, Stethoscope } from "lucide-react";
 import { toast } from "sonner";
 
 const COLORS = ["hsl(213,56%,24%)", "hsl(174,62%,38%)", "hsl(38,92%,50%)", "hsl(152,60%,40%)", "hsl(205,80%,56%)"];
@@ -9,11 +9,13 @@ function exportPDF(data: {
   avgResponse: string; fastest: number | null; slowest: number | null;
   underThreshold: number; overThreshold: number; acknowledgementRate: string;
   totalAlerts: number; criticalAlerts: number; codeBlueCount: number;
-  avgSatisfaction: string; avgWaitTime: string;
+  avgSatisfaction: string; avgResponsiveness: string; avgWaitTime: string;
   wardCodeBlue: { ward: string; events: number; avgResponse: number; alerts: number }[];
+  wardRatios: { ward: string; nurses: number; patients: number; ratio: string; threshold: string; status: string }[];
+  feedbackCount: number;
 }) {
   import("jspdf").then(({ jsPDF }) => {
-    import("jspdf-autotable").then((autoTableModule) => {
+    import("jspdf-autotable").then(() => {
       const doc = new jsPDF();
       const now = new Date().toLocaleString();
 
@@ -23,6 +25,7 @@ function exportPDF(data: {
       doc.setTextColor(100);
       doc.text(`Generated: ${now}`, 14, 28);
 
+      // KPIs
       doc.setFontSize(12);
       doc.setTextColor(0);
       doc.text("Key Performance Indicators", 14, 40);
@@ -38,7 +41,8 @@ function exportPDF(data: {
         ["Critical Alerts", String(data.criticalAlerts)],
         ["Total Code Blues", String(data.codeBlueCount)],
         ["Avg Satisfaction", data.avgSatisfaction],
-        ["Avg Wait Time", `${data.avgWaitTime} min`],
+        ["Avg Nurse Responsiveness", data.avgResponsiveness],
+        ["Total Feedback Entries", String(data.feedbackCount)],
       ];
 
       (doc as any).autoTable({
@@ -49,16 +53,35 @@ function exportPDF(data: {
         headStyles: { fillColor: [30, 58, 95] },
       });
 
-      const afterKpi = (doc as any).lastAutoTable.finalY + 10;
-      doc.text("Ward Performance", 14, afterKpi);
+      // Nurse-Patient Ratios
+      let y = (doc as any).lastAutoTable.finalY + 10;
+      if (y > 250) { doc.addPage(); y = 20; }
+      doc.setFontSize(12);
+      doc.text("Nurse-to-Patient Ratios by Ward", 14, y);
 
       (doc as any).autoTable({
-        startY: afterKpi + 5,
-        head: [["Ward", "Code Blues", "Avg Response (min)", "Alerts"]],
-        body: data.wardCodeBlue.map(w => [w.ward, w.events, w.avgResponse, w.alerts]),
+        startY: y + 5,
+        head: [["Ward", "Nurses", "Patients", "Ratio", "Threshold", "Status"]],
+        body: data.wardRatios.map(w => [w.ward, w.nurses, w.patients, w.ratio, w.threshold, w.status === "safe" ? "Safe" : w.status === "empty" ? "Empty" : "CRITICAL"]),
         theme: "grid",
         headStyles: { fillColor: [30, 58, 95] },
+        bodyStyles: { fontSize: 9 },
       });
+
+      // Ward Performance
+      y = (doc as any).lastAutoTable.finalY + 10;
+      if (y > 250) { doc.addPage(); y = 20; }
+      doc.text("Ward Performance (Code Blue & Alerts)", 14, y);
+
+      if (data.wardCodeBlue.length > 0) {
+        (doc as any).autoTable({
+          startY: y + 5,
+          head: [["Ward", "Code Blues", "Avg Response (min)", "Alerts"]],
+          body: data.wardCodeBlue.map(w => [w.ward, w.events, w.avgResponse, w.alerts]),
+          theme: "grid",
+          headStyles: { fillColor: [30, 58, 95] },
+        });
+      }
 
       doc.save(`hospital-report-${new Date().toISOString().slice(0, 10)}.pdf`);
       toast.success("PDF report downloaded");
@@ -79,6 +102,22 @@ export default function ReportsAnalytics() {
   const wardPatientData = wards.map((w) => ({
     name: w.name,
     value: patients.filter((p) => p.ward_id === w.id && !p.discharge_date).length,
+  }));
+
+  // Nurse-patient ratio data
+  const wardRatioData = wards.map((w) => {
+    const wardNurses = nurses.filter((n) => n.ward_id === w.id && n.status === "On-Duty").length;
+    const wardPatients = patients.filter((p) => p.ward_id === w.id && !p.discharge_date).length;
+    const patientsPerNurse = wardNurses > 0 ? wardPatients / wardNurses : 0;
+    const ratio = wardNurses > 0 ? `1:${patientsPerNurse.toFixed(1)}` : "N/A";
+    const status = wardNurses === 0 ? (wardPatients > 0 ? "critical" : "empty") : patientsPerNurse <= w.safe_ratio_threshold ? "safe" : "critical";
+    return { ward: w.name, nurses: wardNurses, patients: wardPatients, ratio, patientsPerNurse, threshold: `1:${w.safe_ratio_threshold}`, status };
+  });
+
+  const wardRatioChartData = wardRatioData.map(w => ({
+    ward: w.ward,
+    ratio: w.patientsPerNurse,
+    threshold: Number(w.threshold.replace("1:", "")),
   }));
 
   const withResponse = codeBlueEvents.filter((e) => e.response_minutes);
@@ -122,13 +161,19 @@ export default function ReportsAnalytics() {
   }).filter(w => w.events > 0 || w.alerts > 0);
 
   const avgSatisfaction = feedback.length > 0 ? `${(feedback.reduce((s, f) => s + f.satisfaction, 0) / feedback.length).toFixed(1)}/5` : "N/A";
+  const avgResponsiveness = feedback.length > 0 ? `${(feedback.reduce((s, f) => s + f.nurse_responsiveness, 0) / feedback.length).toFixed(1)}/5` : "N/A";
+
+  const activePatients = patients.filter(p => !p.discharge_date).length;
+  const onDutyNurses = nurses.filter(n => n.status === "On-Duty").length;
+  const overallRatio = onDutyNurses > 0 ? (activePatients / onDutyNurses).toFixed(1) : "N/A";
 
   const handleExport = () => {
     exportPDF({
       avgResponse, fastest, slowest, underThreshold, overThreshold,
       acknowledgementRate, totalAlerts, criticalAlerts,
-      codeBlueCount: codeBlueEvents.length, avgSatisfaction, avgWaitTime,
-      wardCodeBlue,
+      codeBlueCount: codeBlueEvents.length, avgSatisfaction, avgResponsiveness,
+      avgWaitTime, wardCodeBlue, feedbackCount: feedback.length,
+      wardRatios: wardRatioData.map(w => ({ ward: w.ward, nurses: w.nurses, patients: w.patients, ratio: w.ratio, threshold: w.threshold, status: w.status })),
     });
   };
 
@@ -137,7 +182,7 @@ export default function ReportsAnalytics() {
       <div className="page-header flex items-center justify-between">
         <div>
           <h1 className="page-title">Reports & Analytics</h1>
-          <p className="page-description">Decision-making insights linking alerts, code blues, and performance</p>
+          <p className="page-description">Decision-making insights linking ratios, alerts, code blues, and feedback</p>
         </div>
         <button onClick={handleExport} className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition">
           <FileText className="w-4 h-4" />
@@ -146,16 +191,38 @@ export default function ReportsAnalytics() {
       </div>
 
       {/* Summary KPIs */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
-        <div className="kpi-card"><div className="flex items-center gap-2 mb-1"><Clock className="w-4 h-4 text-warning" /><span className="text-xs text-muted-foreground">Avg Wait Time</span></div><p className="text-2xl font-bold">{avgWaitTime} min</p></div>
-        <div className="kpi-card"><div className="flex items-center gap-2 mb-1"><TrendingUp className="w-4 h-4 text-success" /><span className="text-xs text-muted-foreground">Fastest</span></div><p className="text-2xl font-bold text-success">{fastest !== null ? `${fastest} min` : "N/A"}</p></div>
-        <div className="kpi-card"><div className="flex items-center gap-2 mb-1"><AlertTriangle className="w-4 h-4 text-destructive" /><span className="text-xs text-muted-foreground">Slowest</span></div><p className="text-2xl font-bold text-destructive">{slowest !== null ? `${slowest} min` : "N/A"}</p></div>
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-8 gap-4 mb-6">
+        <div className="kpi-card"><div className="flex items-center gap-2 mb-1"><Users className="w-4 h-4 text-info" /><span className="text-xs text-muted-foreground">Patients</span></div><p className="text-2xl font-bold">{activePatients}</p></div>
+        <div className="kpi-card"><div className="flex items-center gap-2 mb-1"><Stethoscope className="w-4 h-4 text-accent" /><span className="text-xs text-muted-foreground">On-Duty</span></div><p className="text-2xl font-bold">{onDutyNurses}</p></div>
+        <div className="kpi-card"><div className="flex items-center gap-2 mb-1"><TrendingUp className="w-4 h-4 text-primary" /><span className="text-xs text-muted-foreground">Overall Ratio</span></div><p className="text-2xl font-bold">1:{overallRatio}</p></div>
+        <div className="kpi-card"><div className="flex items-center gap-2 mb-1"><Clock className="w-4 h-4 text-warning" /><span className="text-xs text-muted-foreground">Avg Response</span></div><p className="text-2xl font-bold">{avgWaitTime} min</p></div>
         <div className="kpi-card"><div className="flex items-center gap-2 mb-1"><CheckCircle className="w-4 h-4 text-success" /><span className="text-xs text-muted-foreground">Under 3 min</span></div><p className="text-2xl font-bold text-success">{underThreshold}</p></div>
         <div className="kpi-card"><div className="flex items-center gap-2 mb-1"><AlertTriangle className="w-4 h-4 text-destructive" /><span className="text-xs text-muted-foreground">Over 3 min</span></div><p className="text-2xl font-bold text-destructive">{overThreshold}</p></div>
         <div className="kpi-card"><div className="flex items-center gap-2 mb-1"><CheckCircle className="w-4 h-4 text-info" /><span className="text-xs text-muted-foreground">Ack Rate</span></div><p className="text-2xl font-bold">{acknowledgementRate}%</p></div>
+        <div className="kpi-card"><div className="flex items-center gap-2 mb-1"><CheckCircle className="w-4 h-4 text-warning" /><span className="text-xs text-muted-foreground">Satisfaction</span></div><p className="text-2xl font-bold">{avgSatisfaction}</p></div>
       </div>
 
+      {/* Nurse-Patient Ratio Chart */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+        <div className="kpi-card">
+          <h3 className="text-sm font-medium text-muted-foreground mb-4">Nurse-to-Patient Ratio by Ward</h3>
+          {wardRatioChartData.length > 0 ? (
+            <ResponsiveContainer width="100%" height={280}>
+              <BarChart data={wardRatioChartData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                <XAxis dataKey="ward" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} />
+                <YAxis tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} label={{ value: "Patients/Nurse", angle: -90, position: "insideLeft", style: { fontSize: 10 } }} />
+                <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8 }} />
+                <Legend />
+                <Bar dataKey="ratio" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} name="Actual Ratio" />
+                <Bar dataKey="threshold" fill="hsl(var(--destructive))" radius={[4, 4, 0, 0]} name="Threshold" opacity={0.4} />
+              </BarChart>
+            </ResponsiveContainer>
+          ) : (
+            <p className="text-sm text-muted-foreground py-12 text-center">No ratio data</p>
+          )}
+        </div>
+
         <div className="kpi-card">
           <h3 className="text-sm font-medium text-muted-foreground mb-4">Response Time Trend</h3>
           {responseTrend.length > 0 ? (
@@ -173,7 +240,9 @@ export default function ReportsAnalytics() {
             <p className="text-sm text-muted-foreground py-12 text-center">No response data yet</p>
           )}
         </div>
+      </div>
 
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
         <div className="kpi-card">
           <h3 className="text-sm font-medium text-muted-foreground mb-4">Alert Distribution</h3>
           {alertDistribution.length > 0 ? (
@@ -187,6 +256,22 @@ export default function ReportsAnalytics() {
             </ResponsiveContainer>
           ) : (
             <p className="text-sm text-muted-foreground py-12 text-center">No alerts data</p>
+          )}
+        </div>
+
+        <div className="kpi-card">
+          <h3 className="text-sm font-medium text-muted-foreground mb-4">Patient Distribution by Ward</h3>
+          {wardPatientData.some((d) => d.value > 0) ? (
+            <ResponsiveContainer width="100%" height={280}>
+              <PieChart>
+                <Pie data={wardPatientData.filter((d) => d.value > 0)} cx="50%" cy="50%" outerRadius={100} dataKey="value" label={({ name, value }) => `${name}: ${value}`}>
+                  {wardPatientData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
+                </Pie>
+                <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8 }} />
+              </PieChart>
+            </ResponsiveContainer>
+          ) : (
+            <p className="text-sm text-muted-foreground py-12 text-center">No patient data</p>
           )}
         </div>
       </div>
@@ -211,31 +296,49 @@ export default function ReportsAnalytics() {
           )}
         </div>
 
+        {/* Ward Ratio Table */}
         <div className="kpi-card">
-          <h3 className="text-sm font-medium text-muted-foreground mb-4">Patient Distribution by Ward</h3>
-          {wardPatientData.some((d) => d.value > 0) ? (
-            <ResponsiveContainer width="100%" height={280}>
-              <PieChart>
-                <Pie data={wardPatientData.filter((d) => d.value > 0)} cx="50%" cy="50%" outerRadius={100} dataKey="value" label={({ name, value }) => `${name}: ${value}`}>
-                  {wardPatientData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
-                </Pie>
-                <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8 }} />
-              </PieChart>
-            </ResponsiveContainer>
-          ) : (
-            <p className="text-sm text-muted-foreground py-12 text-center">No patient data</p>
-          )}
+          <h3 className="text-sm font-medium text-muted-foreground mb-4">Ward Ratio Summary</h3>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-border">
+                  <th className="text-left py-2 px-3 font-medium text-muted-foreground">Ward</th>
+                  <th className="text-center py-2 px-3 font-medium text-muted-foreground">Nurses</th>
+                  <th className="text-center py-2 px-3 font-medium text-muted-foreground">Patients</th>
+                  <th className="text-center py-2 px-3 font-medium text-muted-foreground">Ratio</th>
+                  <th className="text-center py-2 px-3 font-medium text-muted-foreground">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {wardRatioData.map(w => (
+                  <tr key={w.ward} className="border-b border-border/50">
+                    <td className="py-2 px-3 font-medium">{w.ward}</td>
+                    <td className="py-2 px-3 text-center">{w.nurses}</td>
+                    <td className="py-2 px-3 text-center">{w.patients}</td>
+                    <td className="py-2 px-3 text-center font-bold">{w.ratio}</td>
+                    <td className="py-2 px-3 text-center">
+                      <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${w.status === "safe" ? "status-safe" : w.status === "empty" ? "bg-muted text-muted-foreground" : "status-critical"}`}>
+                        {w.status === "safe" ? "Safe" : w.status === "empty" ? "Empty" : "Critical"}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
 
       <div className="kpi-card">
-        <h3 className="text-sm font-medium text-muted-foreground mb-4">Code Blue & Alert Summary</h3>
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+        <h3 className="text-sm font-medium text-muted-foreground mb-4">Summary</h3>
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
           <div className="p-3 rounded-lg bg-muted/50"><span className="text-xs text-muted-foreground">Total Code Blues</span><p className="text-xl font-bold mt-1">{codeBlueEvents.length}</p></div>
           <div className="p-3 rounded-lg bg-muted/50"><span className="text-xs text-muted-foreground">Total Alerts</span><p className="text-xl font-bold mt-1">{totalAlerts}</p></div>
           <div className="p-3 rounded-lg bg-muted/50"><span className="text-xs text-muted-foreground">Critical Alerts</span><p className="text-xl font-bold mt-1 text-destructive">{criticalAlerts}</p></div>
           <div className="p-3 rounded-lg bg-muted/50"><span className="text-xs text-muted-foreground">Avg Satisfaction</span><p className="text-xl font-bold mt-1">{avgSatisfaction}</p></div>
-          <div className="p-3 rounded-lg bg-muted/50"><span className="text-xs text-muted-foreground">Avg Wait Time</span><p className="text-xl font-bold mt-1">{avgWaitTime} min</p></div>
+          <div className="p-3 rounded-lg bg-muted/50"><span className="text-xs text-muted-foreground">Nurse Responsiveness</span><p className="text-xl font-bold mt-1">{avgResponsiveness}</p></div>
+          <div className="p-3 rounded-lg bg-muted/50"><span className="text-xs text-muted-foreground">Feedback Entries</span><p className="text-xl font-bold mt-1">{feedback.length}</p></div>
         </div>
       </div>
     </div>

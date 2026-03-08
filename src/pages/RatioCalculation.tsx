@@ -34,7 +34,7 @@ export default function RatioCalculation() {
     const wardPatients = patients.filter((p) => p.ward_id === w.id && !p.discharge_date).length;
     const patientsPerNurse = wardNurses > 0 ? wardPatients / wardNurses : 0;
     const ratio = wardNurses > 0 ? `1:${patientsPerNurse.toFixed(1)}` : "N/A";
-    const status = wardNurses === 0 && wardPatients > 0 ? "critical" : patientsPerNurse <= w.safe_ratio_threshold ? "safe" : "critical";
+    const status = wardNurses === 0 ? (wardPatients > 0 ? "critical" : "empty") : patientsPerNurse <= w.safe_ratio_threshold ? "safe" : "critical";
     return { ward: w.name, nurses: wardNurses, patients: wardPatients, ratio, patientsPerNurse, status, threshold: `1:${w.safe_ratio_threshold}`, thresholdNum: w.safe_ratio_threshold };
   });
 
@@ -134,8 +134,8 @@ export default function RatioCalculation() {
               <span>{w.nurses} nurses · {w.patients} patients</span>
               <span>Threshold: {w.threshold}</span>
             </div>
-            <div className={`mt-3 px-3 py-1.5 rounded-md text-xs font-medium text-center ${w.status === "safe" ? "status-safe" : "status-critical"}`}>
-              {w.status === "safe" ? "Within Safe Range" : "EXCEEDS THRESHOLD"}
+            <div className={`mt-3 px-3 py-1.5 rounded-md text-xs font-medium text-center ${w.status === "safe" ? "status-safe" : w.status === "empty" ? "bg-muted text-muted-foreground" : "status-critical"}`}>
+              {w.status === "safe" ? "Within Safe Range" : w.status === "empty" ? "No Staff / No Patients" : "EXCEEDS THRESHOLD"}
             </div>
           </div>
         ))}

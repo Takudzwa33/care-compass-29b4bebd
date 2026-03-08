@@ -29,7 +29,7 @@ export default function RatioHeatmap({ shiftFilter }: RatioHeatmapProps) {
     const wardPatients = patients.filter((p) => p.ward_id === w.id && !p.discharge_date).length;
     const patientsPerNurse = wardNurses > 0 ? wardPatients / wardNurses : 0;
     const ratio = wardNurses > 0 ? `1:${patientsPerNurse.toFixed(1)}` : "N/A";
-    const status = wardNurses === 0 && wardPatients > 0 ? "critical" : patientsPerNurse <= w.safe_ratio_threshold ? "safe" : "critical";
+    const status = wardNurses === 0 ? (wardPatients > 0 ? "critical" : "empty") : patientsPerNurse <= w.safe_ratio_threshold ? "safe" : "critical";
     return { id: w.id, name: w.name, nurses: wardNurses, patients: wardPatients, patientsPerNurse, ratio, status, threshold: w.safe_ratio_threshold };
   });
 
@@ -48,7 +48,7 @@ export default function RatioHeatmap({ shiftFilter }: RatioHeatmapProps) {
           className={`rounded-xl border-2 p-5 transition-all ${getHeatColor(w.patientsPerNurse, w.threshold)}`}>
           <div className="flex items-center justify-between mb-3">
             <h3 className="font-semibold text-sm">{w.name}</h3>
-            {w.status === "safe" ? <CheckCircle className="w-5 h-5 opacity-70" /> : <AlertTriangle className="w-5 h-5 animate-pulse" />}
+            {w.status === "safe" ? <CheckCircle className="w-5 h-5 opacity-70" /> : w.status === "empty" ? null : <AlertTriangle className="w-5 h-5 animate-pulse" />}
           </div>
           <p className="text-3xl font-bold mb-1">{w.ratio}</p>
           <p className="text-xs opacity-70 mb-3">Threshold: 1:{w.threshold}</p>
@@ -57,7 +57,7 @@ export default function RatioHeatmap({ shiftFilter }: RatioHeatmapProps) {
             <span className="flex items-center gap-1"><TrendingDown className="w-3 h-3" /> {w.patients} patients</span>
           </div>
           <div className="mt-3 h-2 rounded-full bg-background/50 overflow-hidden">
-            <div className={`h-full rounded-full transition-all duration-500 ${w.status === "safe" ? "bg-emerald-500" : "bg-red-500"}`}
+            <div className={`h-full rounded-full transition-all duration-500 ${w.status === "safe" ? "bg-emerald-500" : w.status === "empty" ? "bg-muted-foreground/30" : "bg-red-500"}`}
               style={{ width: `${Math.min((w.patientsPerNurse / (w.threshold * 2)) * 100, 100)}%` }} />
           </div>
         </motion.div>
