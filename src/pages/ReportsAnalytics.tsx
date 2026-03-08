@@ -1,7 +1,22 @@
+import { useState, useMemo } from "react";
 import { useWards, useCodeBlueEvents, useFeedback, usePatients, useNurses, useAlerts } from "@/hooks/useDatabase";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, Legend } from "recharts";
-import { Download, Clock, AlertTriangle, TrendingUp, CheckCircle, FileText, Users, Stethoscope, TableIcon } from "lucide-react";
+import { Download, Clock, AlertTriangle, TrendingUp, CheckCircle, FileText, Users, Stethoscope, TableIcon, CalendarIcon } from "lucide-react";
 import { toast } from "sonner";
+import { format, subDays, subMonths, startOfDay, endOfDay, isWithinInterval } from "date-fns";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+
+const DATE_PRESETS = [
+  { label: "All Time", value: "all" },
+  { label: "Today", value: "today" },
+  { label: "7 Days", value: "7d" },
+  { label: "30 Days", value: "30d" },
+  { label: "90 Days", value: "90d" },
+  { label: "Custom", value: "custom" },
+] as const;
 
 const COLORS = ["hsl(213,56%,24%)", "hsl(174,62%,38%)", "hsl(38,92%,50%)", "hsl(152,60%,40%)", "hsl(205,80%,56%)"];
 
@@ -130,6 +145,33 @@ export default function ReportsAnalytics() {
   const { wards } = useWards();
   const { alerts } = useAlerts();
 
+  const [preset, setPreset] = useState<typeof DATE_PRESETS[number]["value"]>("all");
+  const [customFrom, setCustomFrom] = useState<Date | undefined>();
+  const [customTo, setCustomTo] = useState<Date | undefined>();
+
+  const dateRange = useMemo(() => {
+    const now = new Date();
+    switch (preset) {
+      case "today": return { from: startOfDay(now), to: endOfDay(now) };
+      case "7d": return { from: startOfDay(subDays(now, 7)), to: endOfDay(now) };
+      case "30d": return { from: startOfDay(subDays(now, 30)), to: endOfDay(now) };
+      case "90d": return { from: startOfDay(subDays(now, 90)), to: endOfDay(now) };
+      case "custom": return customFrom && customTo ? { from: startOfDay(customFrom), to: endOfDay(customTo) } : null;
+      default: return null;
+    }
+  }, [preset, customFrom, customTo]);
+
+  const inRange = (dateStr: string) => {
+    if (!dateRange) return true;
+    const d = new Date(dateStr);
+    return isWithinInterval(d, { start: dateRange.from, end: dateRange.to });
+  };
+
+  // Filter time-based data by date range
+  const filteredAlerts = useMemo(() => alerts.filter(a => inRange(a.created_at)), [alerts, dateRange]);
+  const filteredCodeBlue = useMemo(() => codeBlueEvents.filter(e => inRange(e.trigger_time)), [codeBlueEvents, dateRange]);
+  const filteredFeedback = useMemo(() => feedback.filter(f => inRange(f.created_at)), [feedback, dateRange]);
+
   const wardMap = Object.fromEntries(wards.map((w) => [w.id, w.name]));
 
   const wardPatientData = wards.map((w) => ({
@@ -153,7 +195,7 @@ export default function ReportsAnalytics() {
     threshold: Number(w.threshold.replace("1:", "")),
   }));
 
-  const withResponse = codeBlueEvents.filter((e) => e.response_minutes);
+  const withResponse = filteredCodeBlue.filter((e) => e.response_minutes);
   const avgResponse = withResponse.length > 0
     ? (withResponse.reduce((s, e) => s + (e.response_minutes || 0), 0) / withResponse.length).toFixed(1)
     : "N/A";
@@ -163,9 +205,9 @@ export default function ReportsAnalytics() {
   const overThreshold = withResponse.filter(e => (e.response_minutes || 0) > 3).length;
   const avgWaitTime = avgResponse;
 
-  const totalAlerts = alerts.length;
-  const criticalAlerts = alerts.filter(a => a.alert_type === "critical").length;
-  const acknowledgedAlerts = alerts.filter(a => a.acknowledged).length;
+  const totalAlerts = filteredAlerts.length;
+  const criticalAlerts = filteredAlerts.filter(a => a.alert_type === "critical").length;
+  const acknowledgedAlerts = filteredAlerts.filter(a => a.acknowledged).length;
   const acknowledgementRate = totalAlerts > 0 ? ((acknowledgedAlerts / totalAlerts) * 100).toFixed(0) : "0";
 
   const responseTrend = withResponse.slice(0, 20).reverse().map((e, i) => ({
@@ -173,19 +215,19 @@ export default function ReportsAnalytics() {
   }));
 
   const alertDistribution = [
-    { name: "Critical", value: alerts.filter(a => a.alert_type === "critical").length },
-    { name: "Warning", value: alerts.filter(a => a.alert_type === "warning").length },
-    { name: "Info", value: alerts.filter(a => a.alert_type === "info").length },
+    { name: "Critical", value: filteredAlerts.filter(a => a.alert_type === "critical").length },
+    { name: "Warning", value: filteredAlerts.filter(a => a.alert_type === "warning").length },
+    { name: "Info", value: filteredAlerts.filter(a => a.alert_type === "info").length },
   ].filter(d => d.value > 0);
 
   const alertColors = ["hsl(0,72%,51%)", "hsl(38,92%,50%)", "hsl(205,80%,56%)"];
 
   const wardCodeBlue = wards.map(w => {
-    const wardEvents = codeBlueEvents.filter(e => e.ward_id === w.id && e.response_minutes);
-    const wardAlerts = alerts.filter(a => a.ward_id === w.id);
+    const wardEvents = filteredCodeBlue.filter(e => e.ward_id === w.id && e.response_minutes);
+    const wardAlerts = filteredAlerts.filter(a => a.ward_id === w.id);
     return {
       ward: w.name,
-      events: codeBlueEvents.filter(e => e.ward_id === w.id).length,
+      events: filteredCodeBlue.filter(e => e.ward_id === w.id).length,
       avgResponse: wardEvents.length > 0
         ? +(wardEvents.reduce((s, e) => s + (e.response_minutes || 0), 0) / wardEvents.length).toFixed(1)
         : 0,
@@ -193,8 +235,8 @@ export default function ReportsAnalytics() {
     };
   }).filter(w => w.events > 0 || w.alerts > 0);
 
-  const avgSatisfaction = feedback.length > 0 ? `${(feedback.reduce((s, f) => s + f.satisfaction, 0) / feedback.length).toFixed(1)}/5` : "N/A";
-  const avgResponsiveness = feedback.length > 0 ? `${(feedback.reduce((s, f) => s + f.nurse_responsiveness, 0) / feedback.length).toFixed(1)}/5` : "N/A";
+  const avgSatisfaction = filteredFeedback.length > 0 ? `${(filteredFeedback.reduce((s, f) => s + f.satisfaction, 0) / filteredFeedback.length).toFixed(1)}/5` : "N/A";
+  const avgResponsiveness = filteredFeedback.length > 0 ? `${(filteredFeedback.reduce((s, f) => s + f.nurse_responsiveness, 0) / filteredFeedback.length).toFixed(1)}/5` : "N/A";
 
   const activePatients = patients.filter(p => !p.discharge_date).length;
   const onDutyNurses = nurses.filter(n => n.status === "On-Duty").length;
@@ -203,8 +245,8 @@ export default function ReportsAnalytics() {
   const exportData = {
     avgResponse, fastest, slowest, underThreshold, overThreshold,
     acknowledgementRate, totalAlerts, criticalAlerts,
-    codeBlueCount: codeBlueEvents.length, avgSatisfaction, avgResponsiveness,
-    avgWaitTime, wardCodeBlue, feedbackCount: feedback.length,
+    codeBlueCount: filteredCodeBlue.length, avgSatisfaction, avgResponsiveness,
+    avgWaitTime, wardCodeBlue, feedbackCount: filteredFeedback.length,
     wardRatios: wardRatioData.map(w => ({ ward: w.ward, nurses: w.nurses, patients: w.patients, ratio: w.ratio, threshold: w.threshold, status: w.status })),
   };
 
@@ -226,10 +268,11 @@ export default function ReportsAnalytics() {
         ["Acknowledgement Rate", `${acknowledgementRate}%`],
         ["Total Alerts", totalAlerts],
         ["Critical Alerts", criticalAlerts],
-        ["Total Code Blues", codeBlueEvents.length],
+        ["Total Code Blues", filteredCodeBlue.length],
         ["Avg Satisfaction", avgSatisfaction],
         ["Avg Nurse Responsiveness", avgResponsiveness],
-        ["Feedback Entries", feedback.length],
+        ["Feedback Entries", filteredFeedback.length],
+        ["Date Range", dateRange ? `${format(dateRange.from, "PP")} – ${format(dateRange.to, "PP")}` : "All Time"],
       ],
     });
   };
@@ -251,6 +294,48 @@ export default function ReportsAnalytics() {
             Export Excel
           </button>
         </div>
+      </div>
+
+      {/* Date Range Filter */}
+      <div className="flex items-center gap-2 flex-wrap mb-6">
+        <CalendarIcon className="w-4 h-4 text-muted-foreground" />
+        {DATE_PRESETS.map(p => (
+          <button key={p.value} onClick={() => setPreset(p.value)}
+            className={cn("px-3 py-1.5 rounded-lg text-xs font-medium transition-colors",
+              preset === p.value ? "bg-primary text-primary-foreground" : "bg-card border border-border text-muted-foreground hover:bg-muted")}>
+            {p.label}
+          </button>
+        ))}
+        {preset === "custom" && (
+          <div className="flex items-center gap-2">
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" size="sm" className={cn("text-xs", !customFrom && "text-muted-foreground")}>
+                  {customFrom ? format(customFrom, "PP") : "From"}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar mode="single" selected={customFrom} onSelect={setCustomFrom} initialFocus className="p-3 pointer-events-auto" />
+              </PopoverContent>
+            </Popover>
+            <span className="text-xs text-muted-foreground">→</span>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" size="sm" className={cn("text-xs", !customTo && "text-muted-foreground")}>
+                  {customTo ? format(customTo, "PP") : "To"}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar mode="single" selected={customTo} onSelect={setCustomTo} initialFocus className="p-3 pointer-events-auto" />
+              </PopoverContent>
+            </Popover>
+          </div>
+        )}
+        {dateRange && (
+          <span className="text-xs text-muted-foreground ml-2">
+            Showing: {format(dateRange.from, "MMM d")} – {format(dateRange.to, "MMM d, yyyy")}
+          </span>
+        )}
       </div>
 
       {/* Summary KPIs */}
@@ -396,12 +481,12 @@ export default function ReportsAnalytics() {
       <div className="kpi-card">
         <h3 className="text-sm font-medium text-muted-foreground mb-4">Summary</h3>
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-          <div className="p-3 rounded-lg bg-muted/50"><span className="text-xs text-muted-foreground">Total Code Blues</span><p className="text-xl font-bold mt-1">{codeBlueEvents.length}</p></div>
+          <div className="p-3 rounded-lg bg-muted/50"><span className="text-xs text-muted-foreground">Total Code Blues</span><p className="text-xl font-bold mt-1">{filteredCodeBlue.length}</p></div>
           <div className="p-3 rounded-lg bg-muted/50"><span className="text-xs text-muted-foreground">Total Alerts</span><p className="text-xl font-bold mt-1">{totalAlerts}</p></div>
           <div className="p-3 rounded-lg bg-muted/50"><span className="text-xs text-muted-foreground">Critical Alerts</span><p className="text-xl font-bold mt-1 text-destructive">{criticalAlerts}</p></div>
           <div className="p-3 rounded-lg bg-muted/50"><span className="text-xs text-muted-foreground">Avg Satisfaction</span><p className="text-xl font-bold mt-1">{avgSatisfaction}</p></div>
           <div className="p-3 rounded-lg bg-muted/50"><span className="text-xs text-muted-foreground">Nurse Responsiveness</span><p className="text-xl font-bold mt-1">{avgResponsiveness}</p></div>
-          <div className="p-3 rounded-lg bg-muted/50"><span className="text-xs text-muted-foreground">Feedback Entries</span><p className="text-xl font-bold mt-1">{feedback.length}</p></div>
+          <div className="p-3 rounded-lg bg-muted/50"><span className="text-xs text-muted-foreground">Feedback Entries</span><p className="text-xl font-bold mt-1">{filteredFeedback.length}</p></div>
         </div>
       </div>
     </div>
