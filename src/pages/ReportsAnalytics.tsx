@@ -268,10 +268,11 @@ export default function ReportsAnalytics() {
         ["Acknowledgement Rate", `${acknowledgementRate}%`],
         ["Total Alerts", totalAlerts],
         ["Critical Alerts", criticalAlerts],
-        ["Total Code Blues", codeBlueEvents.length],
+        ["Total Code Blues", filteredCodeBlue.length],
         ["Avg Satisfaction", avgSatisfaction],
         ["Avg Nurse Responsiveness", avgResponsiveness],
-        ["Feedback Entries", feedback.length],
+        ["Feedback Entries", filteredFeedback.length],
+        ["Date Range", dateRange ? `${format(dateRange.from, "PP")} – ${format(dateRange.to, "PP")}` : "All Time"],
       ],
     });
   };
