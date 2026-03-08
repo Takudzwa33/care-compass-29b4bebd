@@ -481,12 +481,12 @@ export default function ReportsAnalytics() {
       <div className="kpi-card">
         <h3 className="text-sm font-medium text-muted-foreground mb-4">Summary</h3>
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-          <div className="p-3 rounded-lg bg-muted/50"><span className="text-xs text-muted-foreground">Total Code Blues</span><p className="text-xl font-bold mt-1">{codeBlueEvents.length}</p></div>
+          <div className="p-3 rounded-lg bg-muted/50"><span className="text-xs text-muted-foreground">Total Code Blues</span><p className="text-xl font-bold mt-1">{filteredCodeBlue.length}</p></div>
           <div className="p-3 rounded-lg bg-muted/50"><span className="text-xs text-muted-foreground">Total Alerts</span><p className="text-xl font-bold mt-1">{totalAlerts}</p></div>
           <div className="p-3 rounded-lg bg-muted/50"><span className="text-xs text-muted-foreground">Critical Alerts</span><p className="text-xl font-bold mt-1 text-destructive">{criticalAlerts}</p></div>
           <div className="p-3 rounded-lg bg-muted/50"><span className="text-xs text-muted-foreground">Avg Satisfaction</span><p className="text-xl font-bold mt-1">{avgSatisfaction}</p></div>
           <div className="p-3 rounded-lg bg-muted/50"><span className="text-xs text-muted-foreground">Nurse Responsiveness</span><p className="text-xl font-bold mt-1">{avgResponsiveness}</p></div>
-          <div className="p-3 rounded-lg bg-muted/50"><span className="text-xs text-muted-foreground">Feedback Entries</span><p className="text-xl font-bold mt-1">{feedback.length}</p></div>
+          <div className="p-3 rounded-lg bg-muted/50"><span className="text-xs text-muted-foreground">Feedback Entries</span><p className="text-xl font-bold mt-1">{filteredFeedback.length}</p></div>
         </div>
       </div>
     </div>
