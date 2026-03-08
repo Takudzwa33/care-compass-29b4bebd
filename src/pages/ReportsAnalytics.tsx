@@ -1,6 +1,6 @@
 import { useWards, useCodeBlueEvents, useFeedback, usePatients, useNurses, useAlerts } from "@/hooks/useDatabase";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, Legend } from "recharts";
-import { Download, Clock, AlertTriangle, TrendingUp, CheckCircle, FileText, Users, Stethoscope } from "lucide-react";
+import { Download, Clock, AlertTriangle, TrendingUp, CheckCircle, FileText, Users, Stethoscope, TableIcon } from "lucide-react";
 import { toast } from "sonner";
 
 const COLORS = ["hsl(213,56%,24%)", "hsl(174,62%,38%)", "hsl(38,92%,50%)", "hsl(152,60%,40%)", "hsl(205,80%,56%)"];
