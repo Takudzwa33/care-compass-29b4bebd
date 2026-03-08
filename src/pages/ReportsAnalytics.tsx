@@ -89,6 +89,39 @@ function exportPDF(data: {
   });
 }
 
+function exportExcel(data: {
+  wardRatios: { ward: string; nurses: number; patients: number; ratio: string; threshold: string; status: string }[];
+  wardCodeBlue: { ward: string; events: number; avgResponse: number; alerts: number }[];
+  kpis: [string, string | number][];
+}) {
+  import("xlsx").then((XLSX) => {
+    const wb = XLSX.utils.book_new();
+
+    // KPIs sheet
+    const kpiWs = XLSX.utils.aoa_to_sheet([["Metric", "Value"], ...data.kpis]);
+    kpiWs["!cols"] = [{ wch: 30 }, { wch: 20 }];
+    XLSX.utils.book_append_sheet(wb, kpiWs, "KPIs");
+
+    // Ward Ratios sheet
+    const ratioWs = XLSX.utils.json_to_sheet(data.wardRatios.map(w => ({
+      Ward: w.ward, Nurses: w.nurses, Patients: w.patients, Ratio: w.ratio, Threshold: w.threshold, Status: w.status === "safe" ? "Safe" : w.status === "empty" ? "Empty" : "Critical"
+    })));
+    ratioWs["!cols"] = [{ wch: 20 }, { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 12 }, { wch: 10 }];
+    XLSX.utils.book_append_sheet(wb, ratioWs, "Ward Ratios");
+
+    // Ward Performance sheet
+    if (data.wardCodeBlue.length > 0) {
+      const perfWs = XLSX.utils.json_to_sheet(data.wardCodeBlue.map(w => ({
+        Ward: w.ward, "Code Blues": w.events, "Avg Response (min)": w.avgResponse, Alerts: w.alerts
+      })));
+      XLSX.utils.book_append_sheet(wb, perfWs, "Ward Performance");
+    }
+
+    XLSX.writeFile(wb, `hospital-report-${new Date().toISOString().slice(0, 10)}.xlsx`);
+    toast.success("Excel report downloaded");
+  });
+}
+
 export default function ReportsAnalytics() {
   const { patients } = usePatients();
   const { nurses } = useNurses();
