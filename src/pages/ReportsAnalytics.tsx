@@ -195,7 +195,7 @@ export default function ReportsAnalytics() {
     threshold: Number(w.threshold.replace("1:", "")),
   }));
 
-  const withResponse = codeBlueEvents.filter((e) => e.response_minutes);
+  const withResponse = filteredCodeBlue.filter((e) => e.response_minutes);
   const avgResponse = withResponse.length > 0
     ? (withResponse.reduce((s, e) => s + (e.response_minutes || 0), 0) / withResponse.length).toFixed(1)
     : "N/A";
@@ -205,9 +205,9 @@ export default function ReportsAnalytics() {
   const overThreshold = withResponse.filter(e => (e.response_minutes || 0) > 3).length;
   const avgWaitTime = avgResponse;
 
-  const totalAlerts = alerts.length;
-  const criticalAlerts = alerts.filter(a => a.alert_type === "critical").length;
-  const acknowledgedAlerts = alerts.filter(a => a.acknowledged).length;
+  const totalAlerts = filteredAlerts.length;
+  const criticalAlerts = filteredAlerts.filter(a => a.alert_type === "critical").length;
+  const acknowledgedAlerts = filteredAlerts.filter(a => a.acknowledged).length;
   const acknowledgementRate = totalAlerts > 0 ? ((acknowledgedAlerts / totalAlerts) * 100).toFixed(0) : "0";
 
   const responseTrend = withResponse.slice(0, 20).reverse().map((e, i) => ({
@@ -215,19 +215,19 @@ export default function ReportsAnalytics() {
   }));
 
   const alertDistribution = [
-    { name: "Critical", value: alerts.filter(a => a.alert_type === "critical").length },
-    { name: "Warning", value: alerts.filter(a => a.alert_type === "warning").length },
-    { name: "Info", value: alerts.filter(a => a.alert_type === "info").length },
+    { name: "Critical", value: filteredAlerts.filter(a => a.alert_type === "critical").length },
+    { name: "Warning", value: filteredAlerts.filter(a => a.alert_type === "warning").length },
+    { name: "Info", value: filteredAlerts.filter(a => a.alert_type === "info").length },
   ].filter(d => d.value > 0);
 
   const alertColors = ["hsl(0,72%,51%)", "hsl(38,92%,50%)", "hsl(205,80%,56%)"];
 
   const wardCodeBlue = wards.map(w => {
-    const wardEvents = codeBlueEvents.filter(e => e.ward_id === w.id && e.response_minutes);
-    const wardAlerts = alerts.filter(a => a.ward_id === w.id);
+    const wardEvents = filteredCodeBlue.filter(e => e.ward_id === w.id && e.response_minutes);
+    const wardAlerts = filteredAlerts.filter(a => a.ward_id === w.id);
     return {
       ward: w.name,
-      events: codeBlueEvents.filter(e => e.ward_id === w.id).length,
+      events: filteredCodeBlue.filter(e => e.ward_id === w.id).length,
       avgResponse: wardEvents.length > 0
         ? +(wardEvents.reduce((s, e) => s + (e.response_minutes || 0), 0) / wardEvents.length).toFixed(1)
         : 0,
