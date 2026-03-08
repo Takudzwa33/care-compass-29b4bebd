@@ -145,6 +145,33 @@ export default function ReportsAnalytics() {
   const { wards } = useWards();
   const { alerts } = useAlerts();
 
+  const [preset, setPreset] = useState<typeof DATE_PRESETS[number]["value"]>("all");
+  const [customFrom, setCustomFrom] = useState<Date | undefined>();
+  const [customTo, setCustomTo] = useState<Date | undefined>();
+
+  const dateRange = useMemo(() => {
+    const now = new Date();
+    switch (preset) {
+      case "today": return { from: startOfDay(now), to: endOfDay(now) };
+      case "7d": return { from: startOfDay(subDays(now, 7)), to: endOfDay(now) };
+      case "30d": return { from: startOfDay(subDays(now, 30)), to: endOfDay(now) };
+      case "90d": return { from: startOfDay(subDays(now, 90)), to: endOfDay(now) };
+      case "custom": return customFrom && customTo ? { from: startOfDay(customFrom), to: endOfDay(customTo) } : null;
+      default: return null;
+    }
+  }, [preset, customFrom, customTo]);
+
+  const inRange = (dateStr: string) => {
+    if (!dateRange) return true;
+    const d = new Date(dateStr);
+    return isWithinInterval(d, { start: dateRange.from, end: dateRange.to });
+  };
+
+  // Filter time-based data by date range
+  const filteredAlerts = useMemo(() => alerts.filter(a => inRange(a.created_at)), [alerts, dateRange]);
+  const filteredCodeBlue = useMemo(() => codeBlueEvents.filter(e => inRange(e.trigger_time)), [codeBlueEvents, dateRange]);
+  const filteredFeedback = useMemo(() => feedback.filter(f => inRange(f.created_at)), [feedback, dateRange]);
+
   const wardMap = Object.fromEntries(wards.map((w) => [w.id, w.name]));
 
   const wardPatientData = wards.map((w) => ({
