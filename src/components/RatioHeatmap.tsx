@@ -48,7 +48,7 @@ export default function RatioHeatmap({ shiftFilter }: RatioHeatmapProps) {
           className={`rounded-xl border-2 p-5 transition-all ${getHeatColor(w.patientsPerNurse, w.threshold)}`}>
           <div className="flex items-center justify-between mb-3">
             <h3 className="font-semibold text-sm">{w.name}</h3>
-            {w.status === "safe" ? <CheckCircle className="w-5 h-5 opacity-70" /> : <AlertTriangle className="w-5 h-5 animate-pulse" />}
+            {w.status === "safe" ? <CheckCircle className="w-5 h-5 opacity-70" /> : w.status === "empty" ? null : <AlertTriangle className="w-5 h-5 animate-pulse" />}
           </div>
           <p className="text-3xl font-bold mb-1">{w.ratio}</p>
           <p className="text-xs opacity-70 mb-3">Threshold: 1:{w.threshold}</p>
