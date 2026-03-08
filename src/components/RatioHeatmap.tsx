@@ -29,7 +29,7 @@ export default function RatioHeatmap({ shiftFilter }: RatioHeatmapProps) {
     const wardPatients = patients.filter((p) => p.ward_id === w.id && !p.discharge_date).length;
     const patientsPerNurse = wardNurses > 0 ? wardPatients / wardNurses : 0;
     const ratio = wardNurses > 0 ? `1:${patientsPerNurse.toFixed(1)}` : "N/A";
-    const status = wardNurses === 0 && wardPatients > 0 ? "critical" : patientsPerNurse <= w.safe_ratio_threshold ? "safe" : "critical";
+    const status = wardNurses === 0 ? (wardPatients > 0 ? "critical" : "empty") : patientsPerNurse <= w.safe_ratio_threshold ? "safe" : "critical";
     return { id: w.id, name: w.name, nurses: wardNurses, patients: wardPatients, patientsPerNurse, ratio, status, threshold: w.safe_ratio_threshold };
   });
 
