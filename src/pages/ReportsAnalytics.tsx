@@ -200,13 +200,37 @@ export default function ReportsAnalytics() {
   const onDutyNurses = nurses.filter(n => n.status === "On-Duty").length;
   const overallRatio = onDutyNurses > 0 ? (activePatients / onDutyNurses).toFixed(1) : "N/A";
 
-  const handleExport = () => {
-    exportPDF({
-      avgResponse, fastest, slowest, underThreshold, overThreshold,
-      acknowledgementRate, totalAlerts, criticalAlerts,
-      codeBlueCount: codeBlueEvents.length, avgSatisfaction, avgResponsiveness,
-      avgWaitTime, wardCodeBlue, feedbackCount: feedback.length,
-      wardRatios: wardRatioData.map(w => ({ ward: w.ward, nurses: w.nurses, patients: w.patients, ratio: w.ratio, threshold: w.threshold, status: w.status })),
+  const exportData = {
+    avgResponse, fastest, slowest, underThreshold, overThreshold,
+    acknowledgementRate, totalAlerts, criticalAlerts,
+    codeBlueCount: codeBlueEvents.length, avgSatisfaction, avgResponsiveness,
+    avgWaitTime, wardCodeBlue, feedbackCount: feedback.length,
+    wardRatios: wardRatioData.map(w => ({ ward: w.ward, nurses: w.nurses, patients: w.patients, ratio: w.ratio, threshold: w.threshold, status: w.status })),
+  };
+
+  const handleExportPDF = () => exportPDF(exportData);
+
+  const handleExportExcel = () => {
+    exportExcel({
+      wardRatios: exportData.wardRatios,
+      wardCodeBlue: exportData.wardCodeBlue,
+      kpis: [
+        ["Active Patients", activePatients],
+        ["On-Duty Nurses", onDutyNurses],
+        ["Overall Ratio", `1:${overallRatio}`],
+        ["Avg Response Time", `${avgResponse} min`],
+        ["Fastest Response", fastest !== null ? `${fastest} min` : "N/A"],
+        ["Slowest Response", slowest !== null ? `${slowest} min` : "N/A"],
+        ["Under 3 min", underThreshold],
+        ["Over 3 min", overThreshold],
+        ["Acknowledgement Rate", `${acknowledgementRate}%`],
+        ["Total Alerts", totalAlerts],
+        ["Critical Alerts", criticalAlerts],
+        ["Total Code Blues", codeBlueEvents.length],
+        ["Avg Satisfaction", avgSatisfaction],
+        ["Avg Nurse Responsiveness", avgResponsiveness],
+        ["Feedback Entries", feedback.length],
+      ],
     });
   };
 
@@ -217,10 +241,16 @@ export default function ReportsAnalytics() {
           <h1 className="page-title">Reports & Analytics</h1>
           <p className="page-description">Decision-making insights linking ratios, alerts, code blues, and feedback</p>
         </div>
-        <button onClick={handleExport} className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition">
-          <FileText className="w-4 h-4" />
-          Export PDF
-        </button>
+        <div className="flex items-center gap-2">
+          <button onClick={handleExportPDF} className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition">
+            <FileText className="w-4 h-4" />
+            Export PDF
+          </button>
+          <button onClick={handleExportExcel} className="flex items-center gap-2 px-4 py-2 rounded-lg bg-accent text-accent-foreground text-sm font-medium hover:opacity-90 transition border border-border">
+            <TableIcon className="w-4 h-4" />
+            Export Excel
+          </button>
+        </div>
       </div>
 
       {/* Summary KPIs */}
