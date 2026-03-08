@@ -34,7 +34,7 @@ const navItems = [
   { to: "/code-blue", label: "Code Blue", icon: AlertTriangle, roles: ["admin", "nurse", "doctor", "emergency"] },
   { to: "/alerts", label: "Alerts", icon: Bell, roles: ["admin", "nurse", "doctor", "emergency"] },
   { to: "/feedback", label: "Patient Feedback", icon: MessageSquare, roles: ["admin", "nurse", "doctor"] },
-  { to: "/reports", label: "Reports", icon: BarChart3, roles: ["admin", "doctor"] },
+  { to: "/reports", label: "Reports", icon: BarChart3, roles: ["admin", "doctor", "nurse"] },
   { to: "/audit", label: "Access Audit", icon: Shield, roles: ["admin"] },
   { to: "/emr-import", label: "EMR Import", icon: Upload, roles: ["admin"] },
   { to: "/data-audit", label: "Data Audit", icon: History, roles: ["admin"] },
