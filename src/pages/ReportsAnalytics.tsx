@@ -296,6 +296,48 @@ export default function ReportsAnalytics() {
         </div>
       </div>
 
+      {/* Date Range Filter */}
+      <div className="flex items-center gap-2 flex-wrap mb-6">
+        <CalendarIcon className="w-4 h-4 text-muted-foreground" />
+        {DATE_PRESETS.map(p => (
+          <button key={p.value} onClick={() => setPreset(p.value)}
+            className={cn("px-3 py-1.5 rounded-lg text-xs font-medium transition-colors",
+              preset === p.value ? "bg-primary text-primary-foreground" : "bg-card border border-border text-muted-foreground hover:bg-muted")}>
+            {p.label}
+          </button>
+        ))}
+        {preset === "custom" && (
+          <div className="flex items-center gap-2">
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" size="sm" className={cn("text-xs", !customFrom && "text-muted-foreground")}>
+                  {customFrom ? format(customFrom, "PP") : "From"}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar mode="single" selected={customFrom} onSelect={setCustomFrom} initialFocus className="p-3 pointer-events-auto" />
+              </PopoverContent>
+            </Popover>
+            <span className="text-xs text-muted-foreground">→</span>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" size="sm" className={cn("text-xs", !customTo && "text-muted-foreground")}>
+                  {customTo ? format(customTo, "PP") : "To"}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar mode="single" selected={customTo} onSelect={setCustomTo} initialFocus className="p-3 pointer-events-auto" />
+              </PopoverContent>
+            </Popover>
+          </div>
+        )}
+        {dateRange && (
+          <span className="text-xs text-muted-foreground ml-2">
+            Showing: {format(dateRange.from, "MMM d")} – {format(dateRange.to, "MMM d, yyyy")}
+          </span>
+        )}
+      </div>
+
       {/* Summary KPIs */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-8 gap-4 mb-6">
         <div className="kpi-card"><div className="flex items-center gap-2 mb-1"><Users className="w-4 h-4 text-info" /><span className="text-xs text-muted-foreground">Patients</span></div><p className="text-2xl font-bold">{activePatients}</p></div>
