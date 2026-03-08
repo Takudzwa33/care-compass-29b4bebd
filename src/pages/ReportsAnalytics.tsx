@@ -1,6 +1,6 @@
 import { useWards, useCodeBlueEvents, useFeedback, usePatients, useNurses, useAlerts } from "@/hooks/useDatabase";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, Legend } from "recharts";
-import { Download, Clock, AlertTriangle, TrendingUp, CheckCircle, FileText, Users, Stethoscope } from "lucide-react";
+import { Download, Clock, AlertTriangle, TrendingUp, CheckCircle, FileText, Users, Stethoscope, TableIcon } from "lucide-react";
 import { toast } from "sonner";
 
 const COLORS = ["hsl(213,56%,24%)", "hsl(174,62%,38%)", "hsl(38,92%,50%)", "hsl(152,60%,40%)", "hsl(205,80%,56%)"];
@@ -89,6 +89,39 @@ function exportPDF(data: {
   });
 }
 
+function exportExcel(data: {
+  wardRatios: { ward: string; nurses: number; patients: number; ratio: string; threshold: string; status: string }[];
+  wardCodeBlue: { ward: string; events: number; avgResponse: number; alerts: number }[];
+  kpis: [string, string | number][];
+}) {
+  import("xlsx").then((XLSX) => {
+    const wb = XLSX.utils.book_new();
+
+    // KPIs sheet
+    const kpiWs = XLSX.utils.aoa_to_sheet([["Metric", "Value"], ...data.kpis]);
+    kpiWs["!cols"] = [{ wch: 30 }, { wch: 20 }];
+    XLSX.utils.book_append_sheet(wb, kpiWs, "KPIs");
+
+    // Ward Ratios sheet
+    const ratioWs = XLSX.utils.json_to_sheet(data.wardRatios.map(w => ({
+      Ward: w.ward, Nurses: w.nurses, Patients: w.patients, Ratio: w.ratio, Threshold: w.threshold, Status: w.status === "safe" ? "Safe" : w.status === "empty" ? "Empty" : "Critical"
+    })));
+    ratioWs["!cols"] = [{ wch: 20 }, { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 12 }, { wch: 10 }];
+    XLSX.utils.book_append_sheet(wb, ratioWs, "Ward Ratios");
+
+    // Ward Performance sheet
+    if (data.wardCodeBlue.length > 0) {
+      const perfWs = XLSX.utils.json_to_sheet(data.wardCodeBlue.map(w => ({
+        Ward: w.ward, "Code Blues": w.events, "Avg Response (min)": w.avgResponse, Alerts: w.alerts
+      })));
+      XLSX.utils.book_append_sheet(wb, perfWs, "Ward Performance");
+    }
+
+    XLSX.writeFile(wb, `hospital-report-${new Date().toISOString().slice(0, 10)}.xlsx`);
+    toast.success("Excel report downloaded");
+  });
+}
+
 export default function ReportsAnalytics() {
   const { patients } = usePatients();
   const { nurses } = useNurses();
@@ -167,13 +200,37 @@ export default function ReportsAnalytics() {
   const onDutyNurses = nurses.filter(n => n.status === "On-Duty").length;
   const overallRatio = onDutyNurses > 0 ? (activePatients / onDutyNurses).toFixed(1) : "N/A";
 
-  const handleExport = () => {
-    exportPDF({
-      avgResponse, fastest, slowest, underThreshold, overThreshold,
-      acknowledgementRate, totalAlerts, criticalAlerts,
-      codeBlueCount: codeBlueEvents.length, avgSatisfaction, avgResponsiveness,
-      avgWaitTime, wardCodeBlue, feedbackCount: feedback.length,
-      wardRatios: wardRatioData.map(w => ({ ward: w.ward, nurses: w.nurses, patients: w.patients, ratio: w.ratio, threshold: w.threshold, status: w.status })),
+  const exportData = {
+    avgResponse, fastest, slowest, underThreshold, overThreshold,
+    acknowledgementRate, totalAlerts, criticalAlerts,
+    codeBlueCount: codeBlueEvents.length, avgSatisfaction, avgResponsiveness,
+    avgWaitTime, wardCodeBlue, feedbackCount: feedback.length,
+    wardRatios: wardRatioData.map(w => ({ ward: w.ward, nurses: w.nurses, patients: w.patients, ratio: w.ratio, threshold: w.threshold, status: w.status })),
+  };
+
+  const handleExportPDF = () => exportPDF(exportData);
+
+  const handleExportExcel = () => {
+    exportExcel({
+      wardRatios: exportData.wardRatios,
+      wardCodeBlue: exportData.wardCodeBlue,
+      kpis: [
+        ["Active Patients", activePatients],
+        ["On-Duty Nurses", onDutyNurses],
+        ["Overall Ratio", `1:${overallRatio}`],
+        ["Avg Response Time", `${avgResponse} min`],
+        ["Fastest Response", fastest !== null ? `${fastest} min` : "N/A"],
+        ["Slowest Response", slowest !== null ? `${slowest} min` : "N/A"],
+        ["Under 3 min", underThreshold],
+        ["Over 3 min", overThreshold],
+        ["Acknowledgement Rate", `${acknowledgementRate}%`],
+        ["Total Alerts", totalAlerts],
+        ["Critical Alerts", criticalAlerts],
+        ["Total Code Blues", codeBlueEvents.length],
+        ["Avg Satisfaction", avgSatisfaction],
+        ["Avg Nurse Responsiveness", avgResponsiveness],
+        ["Feedback Entries", feedback.length],
+      ],
     });
   };
 
@@ -184,10 +241,16 @@ export default function ReportsAnalytics() {
           <h1 className="page-title">Reports & Analytics</h1>
           <p className="page-description">Decision-making insights linking ratios, alerts, code blues, and feedback</p>
         </div>
-        <button onClick={handleExport} className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition">
-          <FileText className="w-4 h-4" />
-          Export PDF
-        </button>
+        <div className="flex items-center gap-2">
+          <button onClick={handleExportPDF} className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition">
+            <FileText className="w-4 h-4" />
+            Export PDF
+          </button>
+          <button onClick={handleExportExcel} className="flex items-center gap-2 px-4 py-2 rounded-lg bg-accent text-accent-foreground text-sm font-medium hover:opacity-90 transition border border-border">
+            <TableIcon className="w-4 h-4" />
+            Export Excel
+          </button>
+        </div>
       </div>
 
       {/* Summary KPIs */}
