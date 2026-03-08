@@ -57,7 +57,8 @@ export default function NurseManagement() {
             <span className="animate-spin w-6 h-6 border-2 border-primary/30 border-t-primary rounded-full" />
           </div>
         ) : (
-          <div className="overflow-x-auto">
+          {/* Desktop table */}
+          <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                  <tr className="border-b border-border">
@@ -90,6 +91,29 @@ export default function NurseManagement() {
                  ))}
               </tbody>
             </table>
+          </div>
+
+          {/* Mobile cards */}
+          <div className="md:hidden space-y-3">
+            {filtered.length === 0 ? (
+              <p className="py-12 text-center text-muted-foreground">No nurses found</p>
+            ) : filtered.map((n: any) => (
+              <div key={n.id} className="rounded-lg border border-border p-3 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="font-medium text-sm">{n.full_name}</span>
+                  <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${n.status === "On-Duty" ? "status-safe" : "bg-muted text-muted-foreground"}`}>
+                    {n.status}
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 gap-1 text-xs text-muted-foreground">
+                  <span>ID: <span className="font-mono">{n.nurse_code}</span></span>
+                  <span>Role: {n.role_title}</span>
+                  <span>Ward: {wardMap[n.ward_id || ""] || "—"}</span>
+                  <span>Shift: {n.shift}</span>
+                  <span>Exp: {n.years_of_experience || 0}y</span>
+                </div>
+              </div>
+            ))}
           </div>
         )}
       </div>

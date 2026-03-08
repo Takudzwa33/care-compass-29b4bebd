@@ -61,7 +61,8 @@ export default function PatientManagement() {
             <span className="animate-spin w-6 h-6 border-2 border-primary/30 border-t-primary rounded-full" />
           </div>
         ) : (
-          <div className="overflow-x-auto">
+          {/* Desktop table */}
+          <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border">
@@ -120,6 +121,54 @@ export default function PatientManagement() {
                 ))}
               </tbody>
             </table>
+          </div>
+
+          {/* Mobile cards */}
+          <div className="md:hidden space-y-3">
+            {filtered.length === 0 ? (
+              <p className="py-12 text-center text-muted-foreground">No patients found</p>
+            ) : filtered.map((p: any) => (
+              <div key={p.id} className="rounded-lg border border-border p-3 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="font-medium text-sm">{p.full_name}</span>
+                  <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${p.severity === "Critical" ? "status-critical" : p.severity === "Serious" ? "status-warning" : "status-safe"}`}>
+                    {p.severity}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2 text-xs">
+                  <span className="font-mono text-muted-foreground">{p.patient_code}</span>
+                  <span className={`px-2 py-0.5 rounded-full font-medium ${p.discharge_date ? "bg-muted text-muted-foreground" : "status-safe"}`}>
+                    {p.discharge_date ? "Discharged" : "Active"}
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 gap-1 text-xs text-muted-foreground">
+                  <span>Ward: {wardMap[p.ward_id || ""] || "—"}</span>
+                  <span>Admitted: {new Date(p.admission_date).toLocaleDateString()}</span>
+                  <span className="col-span-2">Diagnosis: {p.diagnosis || "—"}</span>
+                </div>
+                <div className="text-xs">
+                  <span className="text-muted-foreground">Nurse: </span>
+                  {canAssign ? (
+                    <select
+                      value={p.assigned_nurse_id || ""}
+                      onChange={(e) => assignNurse(p.id, e.target.value)}
+                      disabled={assigning === p.id}
+                      className="px-2 py-1 rounded border border-input bg-background text-xs"
+                    >
+                      <option value="">Unassigned</option>
+                      {nurses.filter(n => !p.ward_id || n.ward_id === p.ward_id).map(n => (
+                        <option key={n.id} value={n.id}>{n.full_name}</option>
+                      ))}
+                    </select>
+                  ) : (
+                    <span>{nurseNameMap[p.assigned_nurse_id || ""] || "—"}</span>
+                  )}
+                </div>
+                {p.patient_feedback_text && (
+                  <p className="text-xs text-muted-foreground italic truncate">"{p.patient_feedback_text}"</p>
+                )}
+              </div>
+            ))}
           </div>
         )}
       </div>
