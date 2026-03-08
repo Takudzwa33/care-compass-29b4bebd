@@ -57,7 +57,7 @@ export default function RatioHeatmap({ shiftFilter }: RatioHeatmapProps) {
             <span className="flex items-center gap-1"><TrendingDown className="w-3 h-3" /> {w.patients} patients</span>
           </div>
           <div className="mt-3 h-2 rounded-full bg-background/50 overflow-hidden">
-            <div className={`h-full rounded-full transition-all duration-500 ${w.status === "safe" ? "bg-emerald-500" : "bg-red-500"}`}
+            <div className={`h-full rounded-full transition-all duration-500 ${w.status === "safe" ? "bg-emerald-500" : w.status === "empty" ? "bg-muted-foreground/30" : "bg-red-500"}`}
               style={{ width: `${Math.min((w.patientsPerNurse / (w.threshold * 2)) * 100, 100)}%` }} />
           </div>
         </motion.div>

@@ -134,8 +134,8 @@ export default function RatioCalculation() {
               <span>{w.nurses} nurses · {w.patients} patients</span>
               <span>Threshold: {w.threshold}</span>
             </div>
-            <div className={`mt-3 px-3 py-1.5 rounded-md text-xs font-medium text-center ${w.status === "safe" ? "status-safe" : "status-critical"}`}>
-              {w.status === "safe" ? "Within Safe Range" : "EXCEEDS THRESHOLD"}
+            <div className={`mt-3 px-3 py-1.5 rounded-md text-xs font-medium text-center ${w.status === "safe" ? "status-safe" : w.status === "empty" ? "bg-muted text-muted-foreground" : "status-critical"}`}>
+              {w.status === "safe" ? "Within Safe Range" : w.status === "empty" ? "No Staff / No Patients" : "EXCEEDS THRESHOLD"}
             </div>
           </div>
         ))}
