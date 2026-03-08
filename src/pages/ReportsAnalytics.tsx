@@ -235,8 +235,8 @@ export default function ReportsAnalytics() {
     };
   }).filter(w => w.events > 0 || w.alerts > 0);
 
-  const avgSatisfaction = feedback.length > 0 ? `${(feedback.reduce((s, f) => s + f.satisfaction, 0) / feedback.length).toFixed(1)}/5` : "N/A";
-  const avgResponsiveness = feedback.length > 0 ? `${(feedback.reduce((s, f) => s + f.nurse_responsiveness, 0) / feedback.length).toFixed(1)}/5` : "N/A";
+  const avgSatisfaction = filteredFeedback.length > 0 ? `${(filteredFeedback.reduce((s, f) => s + f.satisfaction, 0) / filteredFeedback.length).toFixed(1)}/5` : "N/A";
+  const avgResponsiveness = filteredFeedback.length > 0 ? `${(filteredFeedback.reduce((s, f) => s + f.nurse_responsiveness, 0) / filteredFeedback.length).toFixed(1)}/5` : "N/A";
 
   const activePatients = patients.filter(p => !p.discharge_date).length;
   const onDutyNurses = nurses.filter(n => n.status === "On-Duty").length;
@@ -245,8 +245,8 @@ export default function ReportsAnalytics() {
   const exportData = {
     avgResponse, fastest, slowest, underThreshold, overThreshold,
     acknowledgementRate, totalAlerts, criticalAlerts,
-    codeBlueCount: codeBlueEvents.length, avgSatisfaction, avgResponsiveness,
-    avgWaitTime, wardCodeBlue, feedbackCount: feedback.length,
+    codeBlueCount: filteredCodeBlue.length, avgSatisfaction, avgResponsiveness,
+    avgWaitTime, wardCodeBlue, feedbackCount: filteredFeedback.length,
     wardRatios: wardRatioData.map(w => ({ ward: w.ward, nurses: w.nurses, patients: w.patients, ratio: w.ratio, threshold: w.threshold, status: w.status })),
   };
 
